@@ -218,6 +218,38 @@ audio { width: 100%; border-radius: 8px; accent-color: var(--accent); }
 .tip { font-size: 12px; color: var(--muted); line-height: 1.5; }
 .tip code { color: var(--accent); font-family: var(--mono); }
 
+/* PLAYBACK RECOMMENDATION */
+.playback-rec {
+  background: linear-gradient(135deg, rgba(62,232,160,0.07), rgba(124,111,255,0.05));
+  border: 1px solid rgba(62,232,160,0.25);
+  border-radius: 14px; padding: 18px; margin-top: 12px;
+}
+.rec-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+.rec-icon { font-size: 24px; margin-top: 2px; }
+.rec-title { font-size: 14px; font-weight: 700; color: var(--accent3); }
+.rec-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.rec-speed-display {
+  background: rgba(62,232,160,0.08); border: 1px solid rgba(62,232,160,0.2);
+  border-radius: 10px; padding: 12px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px;
+}
+.rec-speed-label { font-size: 12px; color: var(--muted); font-weight: 500; }
+.rec-speed-val { font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--accent3); }
+.rec-formula { font-size: 11px; font-family: var(--mono); color: var(--muted); margin-bottom: 14px; text-align: right; }
+.rec-code-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 7px; }
+.rec-code {
+  background: #0d0d18; border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px 14px;
+  font-family: var(--mono); font-size: 12px;
+  color: #c0c0e0; line-height: 1.7; white-space: pre;
+  overflow-x: auto;
+}
+.rec-code .kw { color: #7c6fff; }
+.rec-code .str { color: #f0a070; }
+.rec-code .num { color: #3ee8a0; }
+.rec-code .cm { color: #555570; }
+
 .btn-row { display: flex; gap: 8px; }
 .btn-row .btn { flex: 1; }
 
@@ -386,7 +418,25 @@ audio { width: 100%; border-radius: 8px; accent-color: var(--accent); }
     <div class="result-lbl" id="resultLbl">Asset ID</div>
     <div class="result-val" id="resultVal"></div>
     <button class="copy-btn" id="copyBtn" onclick="copyId()" style="display:none">📋 Copy ID</button>
-    <p class="tip" id="resultTip" style="margin-top:8px;display:none">Gunakan di script: <code>rbxassetid://[ID]</code></p>
+  </div>
+
+  <!-- PLAYBACK RECOMMENDATION -->
+  <div class="playback-rec" id="playbackRec" style="display:none">
+    <div class="rec-header">
+      <span class="rec-icon">🎯</span>
+      <div>
+        <div class="rec-title">Rekomendasi PlaybackSpeed</div>
+        <div class="rec-sub">Agar musik terdengar normal di game Roblox</div>
+      </div>
+    </div>
+    <div class="rec-speed-display">
+      <div class="rec-speed-label">PlaybackSpeed yang harus dipakai</div>
+      <div class="rec-speed-val" id="recSpeedVal">0.435</div>
+    </div>
+    <div class="rec-formula" id="recFormula">1 ÷ 2.3x = 0.435</div>
+    <div class="rec-code-label">📋 Script siap pakai (paste ke LocalScript/Script):</div>
+    <div class="rec-code" id="recCode"></div>
+    <button class="copy-btn" style="margin-top:10px;width:100%;justify-content:center" onclick="copyScript()">📋 Copy Script</button>
   </div>
 
   <!-- RESET -->
@@ -537,8 +587,22 @@ async function doUpload() {
       : data.assetId;
     document.getElementById('resultVal').textContent = idStr;
     document.getElementById('copyBtn').style.display = 'inline-flex';
-    document.getElementById('resultTip').style.display = 'block';
     window._lastAssetId = String(data.assetId).replace('pending:','');
+
+    // Hitung rekomendasi PlaybackSpeed
+    const speed = parseFloat(document.getElementById('speedSlider').value);
+    const playbackSpeed = Math.round((1 / speed) * 10000) / 10000;
+    window._lastPlaybackSpeed = playbackSpeed;
+    window._lastAssetName = name;
+
+    document.getElementById('recSpeedVal').textContent = playbackSpeed.toFixed(4);
+    document.getElementById('recFormula').textContent = `1 ÷ ${speed.toFixed(2)}x = ${playbackSpeed.toFixed(4)}`;
+
+    // Generate script
+    const assetId = window._lastAssetId;
+    const script = generateScript(assetId, playbackSpeed, name);
+    document.getElementById('recCode').innerHTML = script;
+    document.getElementById('playbackRec').style.display = 'block';
   } catch(e) {
     hideProgress();
     const result = document.getElementById('result');
@@ -546,10 +610,34 @@ async function doUpload() {
     document.getElementById('resultLbl').textContent = '❌ Error';
     document.getElementById('resultVal').textContent = e.message;
     document.getElementById('copyBtn').style.display = 'none';
-    document.getElementById('resultTip').style.display = 'none';
+    document.getElementById('playbackRec').style.display = 'none';
   }
 
   setBtn('btnUpload', false, '⬆️ Upload ke Roblox');
+}
+
+function generateScript(assetId, playbackSpeed, name) {
+  const ps = playbackSpeed.toFixed(4);
+  return `<span class="cm">-- Audio: ${name}</span>
+<span class="cm">-- PlaybackSpeed ini mengkompensasi speed ${(1/playbackSpeed).toFixed(2)}x saat proses</span>
+<span class="kw">local</span> sound = Instance.new(<span class="str">"Sound"</span>)
+sound.SoundId = <span class="str">"rbxassetid://${assetId}"</span>
+sound.PlaybackSpeed = <span class="num">${ps}</span>
+sound.Volume = <span class="num">1</span>
+sound.Looped = <span class="kw">true</span>
+sound.Parent = workspace
+sound:Play()`;
+}
+
+function copyScript() {
+  const id = window._lastAssetId;
+  const ps = (window._lastPlaybackSpeed || 1).toFixed(4);
+  const name = window._lastAssetName || 'Audio';
+  const raw = `-- Audio: ${name}\n-- PlaybackSpeed ini mengkompensasi speed ${(1/window._lastPlaybackSpeed).toFixed(2)}x saat proses\nlocal sound = Instance.new("Sound")\nsound.SoundId = "rbxassetid://${id}"\nsound.PlaybackSpeed = ${ps}\nsound.Volume = 1\nsound.Looped = true\nsound.Parent = workspace\nsound:Play()`;
+  navigator.clipboard.writeText(raw).then(() => {
+    const btns = document.querySelectorAll('.playback-rec .copy-btn');
+    btns.forEach(b => { b.textContent = '✓ Tersalin!'; setTimeout(() => { b.textContent = '📋 Copy Script'; }, 1500); });
+  });
 }
 
 function copyId() {
@@ -572,6 +660,7 @@ function resetForm() {
   document.getElementById('ampSlider').value = -4;
   document.getElementById('previewCard').classList.remove('show');
   document.getElementById('result').className = 'result';
+  document.getElementById('playbackRec').style.display = 'none';
   updateSliders();
   if (previewObjectUrl) { URL.revokeObjectURL(previewObjectUrl); previewObjectUrl = null; }
 }
