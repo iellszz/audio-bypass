@@ -282,7 +282,8 @@ audio{width:100%;border-radius:8px;accent-color:var(--accent);}
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('single',this)">🎵 Bypass</button>
     <button class="tab-btn" onclick="switchTab('bulk',this)">📦 Bulk Bypass</button>
-    <button class="tab-btn" onclick="switchTab('direct',this)">⬆️ Direct Upload</button>
+    <button class="tab-btn" onclick="switchTab('direct',this)">⬆️ Direct</button>
+    <button class="tab-btn" onclick="switchTab('reupload',this)">🔁 Reupload ID</button>
   </div>
 
   <!-- AUDIO SETTINGS (shared) -->
@@ -463,6 +464,71 @@ audio{width:100%;border-radius:8px;accent-color:var(--accent);}
       </div>
       <div class="bs-list" id="dsList"></div>
       <button class="copy-btn btn-full" style="margin-top:8px;justify-content:center" onclick="copyDirectIds()">📋 Copy Semua Asset ID</button>
+    </div>
+  </div>
+  <!-- REUPLOAD BY ID TAB -->
+  <div class="tab-panel" id="tab-reupload">
+    <div class="card" style="background:linear-gradient(135deg,rgba(124,111,255,.07),rgba(255,107,157,.05));border-color:rgba(124,111,255,.25)">
+      <div class="card-label" style="color:var(--accent)">🔁 Reupload by Asset ID</div>
+      <p class="tip">Masukkan Asset ID musik yang sudah di-bypass → upload ulang ke akunmu → dapat PlaybackSpeed otomatis.</p>
+    </div>
+
+    <!-- DETECT METHOD -->
+    <div class="card">
+      <div class="card-label">🎯 Cara Detect PlaybackSpeed</div>
+      <div class="creator-select">
+        <div class="creator-opt active" id="detectManual" onclick="selectDetect('manual')">
+          <div class="co-icon">✏️</div>
+          <div class="co-label">Manual</div>
+          <div class="co-sub">Input speed bypass</div>
+        </div>
+        <div class="creator-opt" id="detectAuto" onclick="selectDetect('auto')">
+          <div class="co-icon">🔍</div>
+          <div class="co-label">Auto Detect</div>
+          <div class="co-sub">Dari durasi audio</div>
+        </div>
+      </div>
+      <div id="manualSpeedWrap">
+        <div class="field" style="margin-bottom:0">
+          <label>Speed bypass yang dipakai dulu</label>
+          <input type="text" id="globalBypassSpeed" value="2.3" placeholder="Contoh: 2.3">
+          <p class="tip" style="margin-top:5px">Ini akan dipakai untuk semua item. Bisa di-override per item.</p>
+        </div>
+      </div>
+      <div id="autoSpeedWrap" style="display:none">
+        <p class="tip" style="padding:8px;background:rgba(124,111,255,.07);border-radius:8px;border:1px solid rgba(124,111,255,.15)">
+          🔍 Auto detect akan menganalisis durasi audio yang di-fetch. Jika tidak bisa detect, default 2.3x dipakai.
+        </p>
+      </div>
+    </div>
+
+    <!-- BULK INPUT -->
+    <div class="card">
+      <div class="card-label">📋 Daftar Asset ID</div>
+      <p class="tip" style="margin-bottom:10px">Format per baris: <code>AssetID | Nama Lagu | SpeedBypass(opsional)</code></p>
+      <textarea id="reidInput" placeholder="Contoh:
+74984701492756 | 5SOS - Ghost of You | 2.3
+138208885584922 | Nama Lagu 2 | 2.3
+507771019 | Nama Lagu 3" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--mono);font-size:12px;padding:12px;outline:none;resize:vertical;min-height:140px;line-height:1.6"></textarea>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btn-s" style="font-size:12px;padding:7px 12px" onclick="addReidExample()">+ Contoh</button>
+        <button class="btn btn-s" style="font-size:12px;padding:7px 12px" onclick="clearReid()">🗑️ Clear</button>
+        <span id="reidCount" style="font-size:12px;color:var(--muted);font-family:var(--mono);margin-left:auto;padding:7px 0">0 item</span>
+      </div>
+    </div>
+
+    <button class="btn btn-full" id="btnReupload" onclick="doReuploadId()" style="margin-bottom:10px;background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;font-weight:700">🔁 Reupload Semua</button>
+    <div class="pw" id="rpw"><div class="pb" id="rpb"></div></div>
+
+    <!-- RESULTS -->
+    <div class="bulk-summary" id="reidSummary">
+      <div class="bs-stats">
+        <div class="bs-stat total"><div class="bsn" id="rsTotal">0</div><div class="bsl">Total</div></div>
+        <div class="bs-stat ok"><div class="bsn" id="rsOk">0</div><div class="bsl">Berhasil</div></div>
+        <div class="bs-stat fail"><div class="bsn" id="rsFail">0</div><div class="bsl">Gagal</div></div>
+      </div>
+      <div class="bs-list" id="rsList"></div>
+      <button class="copy-btn btn-full" style="margin-top:8px;justify-content:center" onclick="copyReidResults()">📋 Copy Semua Lua Entry</button>
     </div>
   </div>
 
@@ -885,6 +951,151 @@ function copyDirectIds(){
   ).join('\n');
   if(!entries){alert('Belum ada yang berhasil diupload');return;}
   navigator.clipboard.writeText(entries).then(()=>alert('✓ Semua entry Lua tersalin!'));
+}
+
+// REUPLOAD BY ID
+let detectMethod = 'manual';
+let reidResults = [];
+
+function selectDetect(type) {
+  detectMethod = type;
+  document.getElementById('detectManual').classList.toggle('active', type==='manual');
+  document.getElementById('detectAuto').classList.toggle('active', type==='auto');
+  document.getElementById('manualSpeedWrap').style.display = type==='manual' ? 'block' : 'none';
+  document.getElementById('autoSpeedWrap').style.display = type==='auto' ? 'block' : 'none';
+}
+
+function parseReidInput() {
+  const raw = document.getElementById('reidInput').value.trim();
+  if (!raw) return [];
+  const globalSpeed = parseFloat(document.getElementById('globalBypassSpeed').value) || 2.3;
+  return raw.split('\n').map(line => {
+    line = line.trim();
+    if (!line) return null;
+    const parts = line.split('|').map(p => p.trim());
+    const assetId = parts[0]?.replace(/\D/g,'');
+    if (!assetId) return null;
+    return {
+      assetId,
+      name: parts[1] || `Audio_${assetId}`,
+      bypassSpeed: parseFloat(parts[2]) || (detectMethod === 'auto' ? null : globalSpeed)
+    };
+  }).filter(Boolean);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const ta = document.getElementById('reidInput');
+  if (ta) ta.addEventListener('input', () => {
+    const items = parseReidInput();
+    document.getElementById('reidCount').textContent = items.length + ' item';
+  });
+});
+
+function addReidExample() {
+  const ex = `74984701492756 | 5SOS - Ghost of You | 2.3\n138208885584922 | Nama Lagu 2 | 2.3`;
+  document.getElementById('reidInput').value = ex;
+  document.getElementById('reidCount').textContent = '2 item';
+}
+
+function clearReid() {
+  document.getElementById('reidInput').value = '';
+  document.getElementById('reidCount').textContent = '0 item';
+  document.getElementById('reidSummary').classList.remove('show');
+  reidResults = [];
+}
+
+async function doReuploadId() {
+  if (!apiKey) { alert('Setup API Key dulu!'); openModal(); return; }
+  const items = parseReidInput();
+  if (!items.length) { alert('Masukkan minimal 1 Asset ID!'); return; }
+  if (creatorType==='group' && !document.getElementById('groupSelect').value) { alert('Pilih komunitas dulu!'); return; }
+
+  setBtn('btnReupload', true, `Processing 0/${items.length}...`);
+  showProg('rpw', 'rpb');
+  reidResults = [];
+
+  const groupId = creatorType==='group' ? document.getElementById('groupSelect').value : null;
+
+  res.setHeader?.('Content-Type', 'text/event-stream'); // no-op in browser
+
+  document.getElementById('reidSummary').classList.add('show');
+  document.getElementById('rsList').innerHTML = '';
+  let okCount = 0, failCount = 0;
+
+  try {
+    const response = await fetch('/api/bulk-reupload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        apiKey, userId, groupId,
+        items: items.map(i => ({ assetId: i.assetId, name: i.name })),
+        manualSpeed: detectMethod === 'manual' ? (parseFloat(document.getElementById('globalBypassSpeed').value) || 2.3) : null
+      })
+    });
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n'); buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data:')) continue;
+        try {
+          const ev = JSON.parse(line.slice(5));
+          if (ev.type === 'progress') {
+            const pct = ((ev.index+1)/ev.total)*100;
+            document.getElementById('rpb').style.width = pct + '%';
+            setBtn('btnReupload', true, `Processing ${ev.index+1}/${ev.total}...`);
+            if (ev.status === 'success') okCount++;
+            if (ev.status === 'error') failCount++;
+            document.getElementById('rsTotal').textContent = ev.total;
+            document.getElementById('rsOk').textContent = okCount;
+            document.getElementById('rsFail').textContent = failCount;
+          } else if (ev.type === 'done') {
+            reidResults = ev.results || [];
+            renderReidResults(ev.results);
+          }
+        } catch(e) {}
+      }
+    }
+  } catch(e) { alert('Error: ' + e.message); }
+
+  hideProg('rpw', 'rpb');
+  setBtn('btnReupload', false, '🔁 Reupload Semua');
+}
+
+function renderReidResults(results) {
+  const list = document.getElementById('rsList');
+  list.innerHTML = results.map(r => {
+    if (r.status === 'success') {
+      const ps = r.playbackSpeed ? parseFloat(r.playbackSpeed).toFixed(4) : '1.0000';
+      const dur = r.bypassedDuration ? `${r.bypassedDuration}s` : '';
+      return `<div class="bs-item ok">
+        <span>✅</span>
+        <div style="flex:1;min-width:0">
+          <div class="bsi-name">${r.name}</div>
+          <div style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:2px">
+            ID Baru: <span style="color:var(--accent3)">${r.assetId}</span>
+            &nbsp;·&nbsp;PlaybackSpeed: <span style="color:var(--accent)">${ps}</span>
+            ${dur ? `&nbsp;·&nbsp;Durasi: ${dur}` : ''}
+          </div>
+        </div>
+      </div>`;
+    }
+    return `<div class="bs-item fail"><span>❌</span><span class="bsi-name">${r.name}</span><span class="bsi-err">${r.error||'error'}</span></div>`;
+  }).join('');
+}
+
+function copyReidResults() {
+  const entries = reidResults.filter(r => r.status==='success').map(r =>
+    `\t\t{\n\t\t\tSongName = "${r.name}",\n\t\t\tSoundId = "rbxassetid://${r.assetId}",\n\t\t\tImageId = "rbxassetid://",\n\t\t\tPlaybackSpeed = ${r.playbackSpeed ? parseFloat(r.playbackSpeed).toFixed(4) : '1.0000'},\n\t\t},`
+  ).join('\n');
+  if (!entries) { alert('Belum ada yang berhasil'); return; }
+  navigator.clipboard.writeText(entries).then(() => alert('✓ Semua Lua entry tersalin!'));
 }
 
 function resetSingle(){
