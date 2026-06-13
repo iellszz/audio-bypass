@@ -169,56 +169,99 @@ app.post('/api/preview', upload.single('audio'), async (req, res) => {
   }
 });
 
+// Fetch asset endpoint (called by client as fallback)
+app.get('/api/fetch-asset', async (req, res) => {
+  const { id } = req.query;
+  if (!id) return res.status(400).json({ error: 'id wajib' });
+  try {
+    const buffer = await fetchRobloxAudio(id);
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Content-Disposition', `attachment; filename="asset_${id}.mp3"`);
+    res.send(buffer);
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ===== REUPLOAD BY ASSET ID =====
 
-// Fetch audio from Roblox by Asset ID
+// Fetch audio from Roblox by Asset ID with proper headers
 async function fetchRobloxAudio(assetId) {
-  // Try multiple endpoints
-  const urls = [
+  const endpoints = [
     `https://assetdelivery.roblox.com/v1/asset/?id=${assetId}`,
-    `https://assetdelivery.roblox.com/v2/asset/?id=${assetId}`,
+    `https://assetdelivery.roblox.com/v2/assetId/${assetId}`,
   ];
 
   const headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    'Accept': '*/*',
-    'Accept-Encoding': 'gzip, deflate',
+    'User-Agent': 'Roblox/WinInet',
     'Referer': 'https://www.roblox.com/',
+    'Origin': 'https://www.roblox.com',
+    'Accept': '*/*',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Connection': 'keep-alive',
+    'Sec-Fetch-Dest': 'empty',
+    'Sec-Fetch-Mode': 'cors',
+    'Sec-Fetch-Site': 'same-site',
   };
 
-  for (const url of urls) {
+  for (const url of endpoints) {
     try {
+      console.log(`Trying: ${url}`);
       const resp = await axios.get(url, {
         responseType: 'arraybuffer',
-        timeout: 20000,
+        timeout: 25000,
         maxRedirects: 10,
         validateStatus: () => true,
         headers
       });
 
-      if (resp.status === 200 && resp.data.byteLength > 1000) {
-        console.log(`Fetched asset ${assetId}: ${resp.data.byteLength} bytes from ${url}`);
+      console.log(`Status ${resp.status} size ${resp.data?.byteLength} from ${url}`);
+
+      if (resp.status === 200 && resp.data?.byteLength > 1000) {
         return Buffer.from(resp.data);
       }
 
-      // Handle redirect via Location header
-      if (resp.headers?.location) {
+      // Follow redirect manually if needed
+      if ([301,302,303,307,308].includes(resp.status) && resp.headers?.location) {
         const red = await axios.get(resp.headers.location, {
           responseType: 'arraybuffer',
-          timeout: 20000,
+          timeout: 25000,
           validateStatus: () => true,
           headers
         });
-        if (red.status === 200 && red.data.byteLength > 1000) {
+        if (red.status === 200 && red.data?.byteLength > 1000) {
           return Buffer.from(red.data);
         }
       }
     } catch(e) {
-      console.error(`Fetch attempt failed for ${url}:`, e.message);
+      console.error(`Endpoint ${url} failed:`, e.message);
     }
   }
 
-  throw new Error(`Asset ${assetId} gagal di-fetch. Pastikan asset public dan ID benar.`);
+  // Last resort: try via asset delivery v2 JSON endpoint to get CDN URL
+  try {
+    const cdnRes = await axios.get(
+      `https://assetdelivery.roblox.com/v2/asset/?id=${assetId}`,
+      { timeout: 15000, validateStatus: () => true, headers }
+    );
+    console.log('CDN response:', JSON.stringify(cdnRes.data));
+    const cdnUrl = cdnRes.data?.locations?.[0]?.location;
+    if (cdnUrl) {
+      const fileRes = await axios.get(cdnUrl, {
+        responseType: 'arraybuffer',
+        timeout: 25000,
+        validateStatus: () => true
+      });
+      if (fileRes.status === 200 && fileRes.data?.byteLength > 1000) {
+        return Buffer.from(fileRes.data);
+      }
+    }
+  } catch(e) {
+    console.error('CDN v2 failed:', e.message);
+  }
+
+  throw new Error(`Asset ${assetId} gagal di-fetch. Cek Railway logs untuk detail.`);
 }
 
 // Get audio duration using ffprobe
