@@ -173,15 +173,52 @@ app.post('/api/preview', upload.single('audio'), async (req, res) => {
 
 // Fetch audio from Roblox by Asset ID
 async function fetchRobloxAudio(assetId) {
-  const url = `https://assetdelivery.roblox.com/v1/asset/?id=${assetId}`;
-  const resp = await axios.get(url, {
-    responseType: 'arraybuffer',
-    timeout: 30000,
-    validateStatus: () => true,
-    headers: { 'User-Agent': 'Roblox/WinInet' }
-  });
-  if (resp.status !== 200) throw new Error(`Asset ${assetId} tidak ditemukan atau tidak public (status ${resp.status})`);
-  return Buffer.from(resp.data);
+  // Try multiple endpoints
+  const urls = [
+    `https://assetdelivery.roblox.com/v1/asset/?id=${assetId}`,
+    `https://assetdelivery.roblox.com/v2/asset/?id=${assetId}`,
+  ];
+
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    'Accept': '*/*',
+    'Accept-Encoding': 'gzip, deflate',
+    'Referer': 'https://www.roblox.com/',
+  };
+
+  for (const url of urls) {
+    try {
+      const resp = await axios.get(url, {
+        responseType: 'arraybuffer',
+        timeout: 20000,
+        maxRedirects: 10,
+        validateStatus: () => true,
+        headers
+      });
+
+      if (resp.status === 200 && resp.data.byteLength > 1000) {
+        console.log(`Fetched asset ${assetId}: ${resp.data.byteLength} bytes from ${url}`);
+        return Buffer.from(resp.data);
+      }
+
+      // Handle redirect via Location header
+      if (resp.headers?.location) {
+        const red = await axios.get(resp.headers.location, {
+          responseType: 'arraybuffer',
+          timeout: 20000,
+          validateStatus: () => true,
+          headers
+        });
+        if (red.status === 200 && red.data.byteLength > 1000) {
+          return Buffer.from(red.data);
+        }
+      }
+    } catch(e) {
+      console.error(`Fetch attempt failed for ${url}:`, e.message);
+    }
+  }
+
+  throw new Error(`Asset ${assetId} gagal di-fetch. Pastikan asset public dan ID benar.`);
 }
 
 // Get audio duration using ffprobe
@@ -288,23 +325,30 @@ app.post('/api/bulk-reupload', express.json(), async (req, res) => {
 
     send({ type: 'progress', index: i, total: items.length, name: name||assetId, status: 'fetching' });
 
+    // Per-item timeout: 45 seconds max
+    const itemTimeout = new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout 45s — asset lambat di-fetch')), 45000));
+
     try {
-      const audioBuffer = await fetchRobloxAudio(assetId);
-      fs.writeFileSync(tmpPath, audioBuffer);
+      await Promise.race([
+        (async () => {
+          const audioBuffer = await fetchRobloxAudio(assetId);
+          fs.writeFileSync(tmpPath, audioBuffer);
 
-      const bypassedDuration = await getAudioDuration(tmpPath);
-      const spd = manualSpeed ? parseFloat(manualSpeed) : null;
-      const playbackSpeed = spd ? Math.round((1/spd)*100000)/100000 : 1;
+          const bypassedDuration = await getAudioDuration(tmpPath);
+          const spd = manualSpeed ? parseFloat(manualSpeed) : null;
+          const playbackSpeed = spd ? Math.round((1/spd)*100000)/100000 : 1;
 
-      send({ type: 'progress', index: i, total: items.length, name: name||assetId, status: 'uploading' });
+          send({ type: 'progress', index: i, total: items.length, name: name||assetId, status: 'uploading' });
 
-      const safeName = sanitizeName(name || `Audio_${assetId}`);
-      fs.copyFileSync(tmpPath, outPath);
-      const newAssetId = await uploadToRoblox(outPath, apiKey, creator, safeName, '');
+          const safeName = sanitizeName(name || `Audio_${assetId}`);
+          fs.copyFileSync(tmpPath, outPath);
+          const newAssetId = await uploadToRoblox(outPath, apiKey, creator, safeName, '');
 
-      results.push({ name: safeName, assetId: newAssetId, originalAssetId: assetId, playbackSpeed, bypassedDuration: bypassedDuration.toFixed(2), status: 'success' });
-      send({ type: 'progress', index: i, total: items.length, name: safeName, status: 'success', assetId: newAssetId, playbackSpeed });
-
+          results.push({ name: safeName, assetId: newAssetId, originalAssetId: assetId, playbackSpeed, bypassedDuration: bypassedDuration.toFixed(2), status: 'success' });
+          send({ type: 'progress', index: i, total: items.length, name: safeName, status: 'success', assetId: newAssetId, playbackSpeed });
+        })(),
+        itemTimeout
+      ]);
     } catch(e) {
       results.push({ name: name||assetId, originalAssetId: assetId, status: 'error', error: e.message });
       send({ type: 'progress', index: i, total: items.length, name: name||assetId, status: 'error', error: e.message });
@@ -312,7 +356,7 @@ app.post('/api/bulk-reupload', express.json(), async (req, res) => {
       cleanup(tmpPath, outPath);
     }
 
-    if (i < items.length - 1) await sleep(1500);
+    if (i < items.length - 1) await sleep(1000);
   }
 
   send({ type: 'done', results });
