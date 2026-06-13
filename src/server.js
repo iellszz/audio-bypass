@@ -192,12 +192,16 @@ function processAudio(inputPath, outputPath, speed, amplifyDb) {
 }
 
 function buildAtempoChain(speed) {
-  const filters = [];
+  // Direct upload (speed=1), skip processing
+  if (Math.abs(speed - 1.0) < 0.01) return ['atempo=1.0'];
+
+  // aresample before+after reduces robot/artifact voice at high speeds
+  const filters = ['aresample=44100'];
   let rem = speed;
   while (rem > 2.0) { filters.push('atempo=2.0'); rem /= 2.0; }
   while (rem < 0.5) { filters.push('atempo=0.5'); rem *= 2.0; }
   if (Math.abs(rem - 1.0) > 0.001) filters.push(`atempo=${rem.toFixed(6)}`);
-  if (filters.length === 0) filters.push('atempo=1.0');
+  filters.push('aresample=44100');
   return filters;
 }
 
