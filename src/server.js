@@ -169,7 +169,157 @@ app.post('/api/preview', upload.single('audio'), async (req, res) => {
   }
 });
 
-// ===== HELPERS =====
+// ===== REUPLOAD BY ASSET ID =====
+
+// Fetch audio from Roblox by Asset ID
+async function fetchRobloxAudio(assetId) {
+  const url = `https://assetdelivery.roblox.com/v1/asset/?id=${assetId}`;
+  const resp = await axios.get(url, {
+    responseType: 'arraybuffer',
+    timeout: 30000,
+    validateStatus: () => true,
+    headers: { 'User-Agent': 'Roblox/WinInet' }
+  });
+  if (resp.status !== 200) throw new Error(`Asset ${assetId} tidak ditemukan atau tidak public (status ${resp.status})`);
+  return Buffer.from(resp.data);
+}
+
+// Get audio duration using ffprobe
+function getAudioDuration(filePath) {
+  return new Promise((resolve, reject) => {
+    ffmpeg.ffprobe(filePath, (err, meta) => {
+      if (err) reject(err);
+      else resolve(meta?.format?.duration || 0);
+    });
+  });
+}
+
+// Single reupload by ID
+app.post('/api/reupload', express.json(), async (req, res) => {
+  const tmpPath = path.join(os.tmpdir(), `fetch_${Date.now()}.mp3`);
+  const outPath = path.join(os.tmpdir(), `reup_${Date.now()}.mp3`);
+  try {
+    const { apiKey, userId, groupId, assetId, name, manualSpeed } = req.body;
+    if (!apiKey || !userId || !assetId) return res.status(400).json({ error: 'apiKey, userId, assetId wajib' });
+
+    console.log(`Reupload: assetId=${assetId} name=${name} manualSpeed=${manualSpeed}`);
+
+    // Fetch from Roblox
+    const audioBuffer = await fetchRobloxAudio(assetId);
+    fs.writeFileSync(tmpPath, audioBuffer);
+
+    // Get duration of fetched (bypassed) audio
+    const bypassedDuration = await getAudioDuration(tmpPath);
+    console.log(`Bypassed duration: ${bypassedDuration}s`);
+
+    let detectedSpeed = null;
+    let playbackSpeed = 1;
+
+    if (manualSpeed && parseFloat(manualSpeed) > 0) {
+      // Manual: user knows the bypass speed
+      detectedSpeed = parseFloat(manualSpeed);
+      playbackSpeed = Math.round((1 / detectedSpeed) * 100000) / 100000;
+    } else {
+      // Auto detect: estimate from duration
+      // Roblox normal song durations are typically 1-5 minutes
+      // We compare to common durations to estimate speed
+      // heuristic: assume original was between 2-5 min (120-300s)
+      const estimatedOriginalDuration = bypassedDuration;
+      // We can't know original without reference, so we measure what we have
+      // and return duration info for user to cross-check
+      detectedSpeed = null;
+      playbackSpeed = 1; // will be set by user after seeing info
+    }
+
+    // Upload directly (no re-bypass)
+    const safeName = sanitizeName(name || `Audio_${assetId}`);
+    const creator = groupId && groupId !== 'personal'
+      ? { groupId: parseInt(groupId, 10) }
+      : { userId: parseInt(userId, 10) };
+
+    // Copy tmpPath to outPath (no processing needed)
+    fs.copyFileSync(tmpPath, outPath);
+    const newAssetId = await uploadToRoblox(outPath, apiKey, creator, safeName, '');
+
+    res.json({
+      success: true,
+      assetId: newAssetId,
+      name: safeName,
+      bypassedDuration: bypassedDuration.toFixed(2),
+      detectedSpeed,
+      playbackSpeed,
+      originalAssetId: assetId
+    });
+
+  } catch(e) {
+    console.error('Reupload error:', e.message);
+    res.status(500).json({ error: e.message });
+  } finally {
+    cleanup(tmpPath, outPath);
+  }
+});
+
+// Bulk reupload by IDs (SSE)
+app.post('/api/bulk-reupload', express.json(), async (req, res) => {
+  const { apiKey, userId, groupId, items, manualSpeed } = req.body;
+  // items = [{assetId, name}, ...]
+  if (!apiKey || !userId || !items?.length) {
+    return res.status(400).json({ error: 'apiKey, userId, items wajib' });
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const send = (data) => { try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch(e) {} };
+  send({ type: 'start', total: items.length });
+
+  const creator = groupId && groupId !== 'personal'
+    ? { groupId: parseInt(groupId, 10) }
+    : { userId: parseInt(userId, 10) };
+
+  const results = [];
+
+  for (let i = 0; i < items.length; i++) {
+    const { assetId, name } = items[i];
+    const tmpPath = path.join(os.tmpdir(), `rfetch_${Date.now()}_${i}.mp3`);
+    const outPath = path.join(os.tmpdir(), `rout_${Date.now()}_${i}.mp3`);
+
+    send({ type: 'progress', index: i, total: items.length, name: name||assetId, status: 'fetching' });
+
+    try {
+      const audioBuffer = await fetchRobloxAudio(assetId);
+      fs.writeFileSync(tmpPath, audioBuffer);
+
+      const bypassedDuration = await getAudioDuration(tmpPath);
+      const spd = manualSpeed ? parseFloat(manualSpeed) : null;
+      const playbackSpeed = spd ? Math.round((1/spd)*100000)/100000 : 1;
+
+      send({ type: 'progress', index: i, total: items.length, name: name||assetId, status: 'uploading' });
+
+      const safeName = sanitizeName(name || `Audio_${assetId}`);
+      fs.copyFileSync(tmpPath, outPath);
+      const newAssetId = await uploadToRoblox(outPath, apiKey, creator, safeName, '');
+
+      results.push({ name: safeName, assetId: newAssetId, originalAssetId: assetId, playbackSpeed, bypassedDuration: bypassedDuration.toFixed(2), status: 'success' });
+      send({ type: 'progress', index: i, total: items.length, name: safeName, status: 'success', assetId: newAssetId, playbackSpeed });
+
+    } catch(e) {
+      results.push({ name: name||assetId, originalAssetId: assetId, status: 'error', error: e.message });
+      send({ type: 'progress', index: i, total: items.length, name: name||assetId, status: 'error', error: e.message });
+    } finally {
+      cleanup(tmpPath, outPath);
+    }
+
+    if (i < items.length - 1) await sleep(1500);
+  }
+
+  send({ type: 'done', results });
+  res.end();
+});
+
+
 function sanitizeName(name) {
   return (name || 'Audio').replace(/[^\w\s\-]/g, '').trim().slice(0, 50) || 'Audio';
 }
@@ -264,9 +414,149 @@ async function uploadToRoblox(filePath, apiKey, creator, name, description) {
   throw new Error('Tidak ada assetId di response: ' + JSON.stringify(data));
 }
 
-function cleanup(...paths) {
-  paths.forEach(p => { try { if (p && fs.existsSync(p)) fs.unlinkSync(p); } catch(e) {} });
+// Fetch audio duration using ffprobe
+function getAudioDuration(filePath) {
+  return new Promise((resolve) => {
+    ffmpeg.ffprobe(filePath, (err, metadata) => {
+      if (err) { resolve(null); return; }
+      resolve(metadata?.format?.duration || null);
+    });
+  });
 }
+
+// Fetch asset from Roblox by ID
+async function fetchAssetById(assetId) {
+  const url = `https://assetdelivery.roblox.com/v1/asset/?id=${assetId}`;
+  const response = await axios.get(url, {
+    responseType: 'arraybuffer',
+    timeout: 30000,
+    validateStatus: () => true,
+    headers: { 'User-Agent': 'Roblox/WinInet' }
+  });
+  if (response.status !== 200) throw new Error(`Asset ID ${assetId} tidak ditemukan atau tidak public (status ${response.status})`);
+  return Buffer.from(response.data);
+}
+
+// Single reupload by ID
+app.post('/api/reupload-id', express.json(), async (req, res) => {
+  const tmpInput = path.join(os.tmpdir(), `rid_in_${Date.now()}.mp3`);
+  const tmpOut = path.join(os.tmpdir(), `rid_out_${Date.now()}.mp3`);
+  try {
+    const { apiKey, userId, groupId, assetId, name, bypassSpeed } = req.body;
+    if (!apiKey || !userId || !assetId) return res.status(400).json({ error: 'apiKey, userId, assetId wajib' });
+
+    console.log('Reupload ID:', assetId, '| bypassSpeed:', bypassSpeed);
+
+    // Fetch audio
+    const audioBuffer = await fetchAssetById(assetId);
+    fs.writeFileSync(tmpInput, audioBuffer);
+
+    // Get duration of fetched (bypassed) audio
+    const bypassedDuration = await getAudioDuration(tmpInput);
+    console.log('Bypassed duration:', bypassedDuration);
+
+    // Detect or use manual bypass speed
+    let detectedSpeed = parseFloat(bypassSpeed) || null;
+    let detectionMethod = 'manual';
+
+    if (!detectedSpeed && bypassedDuration) {
+      // We can't know original duration without reference, default to 2.3
+      detectedSpeed = 2.3;
+      detectionMethod = 'default';
+    }
+    if (!detectedSpeed) detectedSpeed = 2.3;
+
+    const playbackSpeed = Math.round((1 / detectedSpeed) * 100000) / 100000;
+    const safeName = sanitizeName(name || `Audio_${assetId}`);
+    const creator = groupId && groupId !== 'personal'
+      ? { groupId: parseInt(groupId, 10) }
+      : { userId: parseInt(userId, 10) };
+
+    // Upload as-is (no bypass processing)
+    const newAssetId = await uploadToRoblox(tmpInput, apiKey, creator, safeName, '');
+    console.log('Reupload success:', newAssetId);
+
+    res.json({
+      success: true,
+      originalId: assetId,
+      newAssetId,
+      name: safeName,
+      bypassSpeed: detectedSpeed,
+      playbackSpeed,
+      bypassedDuration,
+      detectionMethod
+    });
+  } catch(e) {
+    console.error('Reupload ID error:', e.message);
+    res.status(500).json({ error: e.message });
+  } finally {
+    cleanup(tmpInput, tmpOut);
+  }
+});
+
+// Bulk reupload by ID (SSE streaming)
+app.post('/api/bulk-reupload-id', express.json(), async (req, res) => {
+  const { apiKey, userId, groupId, items } = req.body;
+  // items: [{assetId, name, bypassSpeed}]
+  if (!apiKey || !userId || !items?.length) {
+    return res.status(400).json({ error: 'apiKey, userId, items wajib' });
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const send = (data) => { try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch(e) {} };
+  send({ type: 'start', total: items.length });
+
+  const creator = groupId && groupId !== 'personal'
+    ? { groupId: parseInt(groupId, 10) }
+    : { userId: parseInt(userId, 10) };
+
+  const results = [];
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const tmpInput = path.join(os.tmpdir(), `brid_${Date.now()}_${i}.mp3`);
+    send({ type: 'progress', index: i, total: items.length, name: item.name || item.assetId, status: 'processing' });
+
+    try {
+      const audioBuffer = await fetchAssetById(item.assetId);
+      fs.writeFileSync(tmpInput, audioBuffer);
+
+      // Get duration for auto-detect
+      const bypassedDuration = await getAudioDuration(tmpInput);
+      const detectedSpeed = parseFloat(item.bypassSpeed) || 2.3;
+      const playbackSpeed = Math.round((1 / detectedSpeed) * 100000) / 100000;
+      const safeName = sanitizeName(item.name || `Audio_${item.assetId}`);
+
+      const newAssetId = await uploadToRoblox(tmpInput, apiKey, creator, safeName, '');
+
+      const result = {
+        status: 'success',
+        originalId: item.assetId,
+        newAssetId,
+        name: safeName,
+        bypassSpeed: detectedSpeed,
+        playbackSpeed,
+        bypassedDuration
+      };
+      results.push(result);
+      send({ type: 'progress', index: i, total: items.length, name: safeName, status: 'success', ...result });
+    } catch(e) {
+      results.push({ status: 'error', originalId: item.assetId, name: item.name || item.assetId, error: e.message });
+      send({ type: 'progress', index: i, total: items.length, name: item.name || item.assetId, status: 'error', error: e.message });
+    } finally {
+      cleanup(tmpInput);
+    }
+
+    if (i < items.length - 1) await sleep(1500);
+  }
+
+  send({ type: 'done', results });
+  res.end();
+});
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
