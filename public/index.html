@@ -280,8 +280,9 @@ audio{width:100%;border-radius:8px;accent-color:var(--accent);}
 
   <!-- TABS -->
   <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('single',this)">🎵 Single Upload</button>
-    <button class="tab-btn" onclick="switchTab('bulk',this)">📦 Bulk Upload</button>
+    <button class="tab-btn active" onclick="switchTab('single',this)">🎵 Bypass</button>
+    <button class="tab-btn" onclick="switchTab('bulk',this)">📦 Bulk Bypass</button>
+    <button class="tab-btn" onclick="switchTab('direct',this)">⬆️ Direct Upload</button>
   </div>
 
   <!-- AUDIO SETTINGS (shared) -->
@@ -425,6 +426,46 @@ audio{width:100%;border-radius:8px;accent-color:var(--accent);}
       <button class="copy-btn btn-full" style="margin-top:8px;justify-content:center" onclick="copyBulkIds()">📋 Copy Semua Asset ID</button>
     </div>
   </div>
+
+  <!-- DIRECT UPLOAD TAB -->
+  <div class="tab-panel" id="tab-direct">
+    <div class="card" style="background:linear-gradient(135deg,rgba(62,232,160,.05),rgba(124,111,255,.04));border-color:rgba(62,232,160,.2)">
+      <div class="card-label" style="color:var(--accent3)">⬆️ Direct Upload — Tanpa Bypass</div>
+      <p class="tip" style="margin-bottom:14px">Upload langsung ke Roblox tanpa proses speed/amplify. Cocok untuk audio yang sudah siap.</p>
+    </div>
+    <div class="card">
+      <div class="card-label">🎵 File Audio</div>
+      <label class="file-drop">
+        <input type="file" id="directFile" accept=".mp3,.ogg,.wav,.flac,.aac" multiple onchange="onDirectChange()">
+        <div class="fd-icon">📂</div>
+        <div class="fd-text">Tap atau drag file audio (bisa banyak)</div>
+        <div class="fd-name" id="directCount"></div>
+        <div class="fmt-hint">.mp3 · .ogg · .wav · .flac · .aac</div>
+      </label>
+      <div class="bulk-list" id="directList"></div>
+    </div>
+    <div class="card">
+      <div class="card-label">📝 Prefix Nama (opsional)</div>
+      <div class="field" style="margin-bottom:0">
+        <label>Prefix</label>
+        <input type="text" id="directPrefix" placeholder="Contoh: OST — nama file akan jadi 'OST namafile'">
+      </div>
+    </div>
+
+    <button class="btn btn-p btn-full" id="btnDirect" onclick="doDirect()" style="margin-bottom:10px;background:var(--accent3);color:#111">⬆️ Upload Langsung ke Roblox</button>
+    <div class="pw" id="dpw"><div class="pb" id="dpb" style="background:var(--accent3)"></div></div>
+
+    <div class="bulk-summary" id="directSummary">
+      <div class="bs-stats">
+        <div class="bs-stat total"><div class="bsn" id="dsTotal">0</div><div class="bsl">Total</div></div>
+        <div class="bs-stat ok"><div class="bsn" id="dsOk">0</div><div class="bsl">Berhasil</div></div>
+        <div class="bs-stat fail"><div class="bsn" id="dsFail">0</div><div class="bsl">Gagal</div></div>
+      </div>
+      <div class="bs-list" id="dsList"></div>
+      <button class="copy-btn btn-full" style="margin-top:8px;justify-content:center" onclick="copyDirectIds()">📋 Copy Semua Asset ID</button>
+    </div>
+  </div>
+
 </main>
 
 <script>
@@ -710,15 +751,10 @@ function copyBulkIds(){
 
 // HELPERS
 function genScript(id,ps,name){
-  return `<span class="cm">-- ${name}</span>
-<span class="cm">-- PlaybackSpeed kompensasi speed ${(1/ps).toFixed(2)}x</span>
-<span class="kw">local</span> sound = Instance.new(<span class="str">"Sound"</span>)
-sound.SoundId = <span class="str">"rbxassetid://${id}"</span>
-sound.PlaybackSpeed = <span class="num">${ps.toFixed(4)}</span>
-sound.Volume = <span class="num">1</span>
-sound.Looped = <span class="kw">true</span>
-sound.Parent = workspace
-sound:Play()`;
+  const entry=`\t\t{\n\t\t\tSongName = "${name}",\n\t\t\tSoundId = "rbxassetid://${id}",\n\t\t\tImageId = "rbxassetid://",\n\t\t\tPlaybackSpeed = ${ps.toFixed(4)},\n\t\t},`;
+  return `<span class="cm">-- Paste ke dalam tabel playlist kamu</span>
+<span class="cm">-- PlaybackSpeed ${ps.toFixed(4)} = kompensasi bypass ${(1/ps).toFixed(2)}x</span>
+<span class="kw">${entry}</span>`;
 }
 
 function copyId(){
@@ -731,11 +767,124 @@ function copyId(){
 }
 
 function copyScript(){
-  const raw=`-- ${window._lastName}\n-- PlaybackSpeed kompensasi speed ${(1/window._lastPs).toFixed(2)}x\nlocal sound = Instance.new("Sound")\nsound.SoundId = "rbxassetid://${window._lastId}"\nsound.PlaybackSpeed = ${(window._lastPs||1).toFixed(4)}\nsound.Volume = 1\nsound.Looped = true\nsound.Parent = workspace\nsound:Play()`;
+  const ps=(window._lastPs||1).toFixed(4);
+  const raw=`\t\t{\n\t\t\tSongName = "${window._lastName}",\n\t\t\tSoundId = "rbxassetid://${window._lastId}",\n\t\t\tImageId = "rbxassetid://",\n\t\t\tPlaybackSpeed = ${ps},\n\t\t},`;
   navigator.clipboard.writeText(raw).then(()=>{
     const btns=document.querySelectorAll('.prec .copy-btn');
     btns.forEach(b=>{b.textContent='✓ Tersalin!';setTimeout(()=>b.textContent='📋 Copy Script',1500);});
   });
+}
+
+// DIRECT UPLOAD (no bypass)
+let directResults=[];
+function onDirectChange(){
+  const files=Array.from(document.getElementById('directFile').files);
+  document.getElementById('directCount').textContent=`📁 ${files.length} file dipilih`;
+  const list=document.getElementById('directList');
+  list.innerHTML=files.map((f,i)=>`
+    <div class="bulk-item" id="di-${i}">
+      <div class="bi-status" id="dis-${i}">·</div>
+      <div class="bi-name">${f.name}</div>
+      <div class="bi-size">${(f.size/1024/1024).toFixed(1)}MB</div>
+    </div>`).join('');
+  document.getElementById('directSummary').classList.remove('show');
+  directResults=[];
+}
+
+async function doDirect(){
+  if(!apiKey){alert('Setup API Key dulu!');openModal();return;}
+  const files=document.getElementById('directFile').files;
+  if(!files.length){alert('Pilih file dulu!');return;}
+  if(creatorType==='group'&&!document.getElementById('groupSelect').value){alert('Pilih komunitas dulu!');return;}
+
+  setBtn('btnDirect',true,`Uploading 0/${files.length}...`);
+  showProg('dpw','dpb');
+  directResults=[];
+
+  const fd=new FormData();
+  Array.from(files).forEach(f=>fd.append('audio',f));
+  fd.append('apiKey',apiKey);
+  fd.append('userId',userId);
+  fd.append('speed','1');      // no bypass
+  fd.append('amplify','0');    // no amplify
+  fd.append('namePrefix',document.getElementById('directPrefix').value.trim());
+  if(creatorType==='group') fd.append('groupId',document.getElementById('groupSelect').value);
+
+  let okCount=0,failCount=0;
+  document.getElementById('directSummary').classList.add('show');
+
+  try {
+    const res=await fetch('/api/bulk-upload',{method:'POST',body:fd});
+    const reader=res.body.getReader();
+    const decoder=new TextDecoder();
+    let buf='';
+    while(true){
+      const {done,value}=await reader.read();
+      if(done)break;
+      buf+=decoder.decode(value,{stream:true});
+      const lines=buf.split('\n');buf=lines.pop();
+      for(const line of lines){
+        if(!line.startsWith('data:'))continue;
+        try{
+          const ev=JSON.parse(line.slice(5));
+          if(ev.type==='progress'){
+            const pct=((ev.index+1)/ev.total)*100;
+            document.getElementById('dpb').style.width=pct+'%';
+            setBtn('btnDirect',true,`Uploading ${ev.index+1}/${ev.total}...`);
+            const item=document.getElementById('di-'+ev.index);
+            const status=document.getElementById('dis-'+ev.index);
+            if(ev.status==='processing'){
+              if(item)item.className='bulk-item processing';
+              if(status)status.innerHTML='<span class="spinner" style="width:10px;height:10px;border-width:1.5px"></span>';
+            } else if(ev.status==='success'){
+              if(item){item.className='bulk-item success';item.insertAdjacentHTML('beforeend',`<span class="bi-id">${ev.assetId}</span>`);}
+              if(status)status.textContent='✓';
+              okCount++;
+            } else if(ev.status==='error'){
+              if(item)item.className='bulk-item error';
+              if(status)status.textContent='✗';
+              failCount++;
+            }
+            document.getElementById('dsTotal').textContent=ev.total;
+            document.getElementById('dsOk').textContent=okCount;
+            document.getElementById('dsFail').textContent=failCount;
+          } else if(ev.type==='done'){
+            directResults=ev.results||[];
+            renderDirectSummary(ev.results);
+          }
+        }catch(e){}
+      }
+    }
+  }catch(e){alert('Upload error: '+e.message);}
+
+  hideProg('dpw','dpb');
+  setBtn('btnDirect',false,'⬆️ Upload Langsung ke Roblox');
+}
+
+function renderDirectSummary(results){
+  const list=document.getElementById('dsList');
+  // Format as Lua table entries
+  const entries=results.map(r=>{
+    if(r.status==='success'){
+      return `\t\t{\n\t\t\tSongName = "${r.name}",\n\t\t\tSoundId = "rbxassetid://${r.assetId}",\n\t\t\tImageId = "rbxassetid://",\n\t\t\tPlaybackSpeed = 1,\n\t\t},`;
+    }
+    return null;
+  }).filter(Boolean);
+
+  list.innerHTML=results.map(r=>`
+    <div class="bs-item ${r.status==='success'?'ok':'fail'}">
+      <span>${r.status==='success'?'✅':'❌'}</span>
+      <span class="bsi-name">${r.name}</span>
+      ${r.status==='success'?`<span class="bsi-id">${r.assetId}</span>`:`<span class="bsi-err">${r.error||'error'}</span>`}
+    </div>`).join('');
+}
+
+function copyDirectIds(){
+  const entries=directResults.filter(r=>r.status==='success').map(r=>
+    `\t\t{\n\t\t\tSongName = "${r.name}",\n\t\t\tSoundId = "rbxassetid://${r.assetId}",\n\t\t\tImageId = "rbxassetid://",\n\t\t\tPlaybackSpeed = 1,\n\t\t},`
+  ).join('\n');
+  if(!entries){alert('Belum ada yang berhasil diupload');return;}
+  navigator.clipboard.writeText(entries).then(()=>alert('✓ Semua entry Lua tersalin!'));
 }
 
 function resetSingle(){
