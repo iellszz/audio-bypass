@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roblox Audio Uploader</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#080810;--surface:#0f0f1a;--surface2:#171726;
+  --border:#252538;--accent:#7c6fff;--accent2:#ff6b9d;
+  --accent3:#3ee8a0;--text:#e8e8f4;--muted:#60608a;
+  --font:'Space Grotesk',sans-serif;--mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse 60% 40% at 50% 0%,rgba(124,111,255,.08) 0%,transparent 70%);pointer-events:none;}
+
+header{position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border);padding:14px 24px;background:rgba(8,8,16,.95);backdrop-filter:blur(16px);display:flex;align-items:center;gap:12px;}
+.logo{width:34px;height:34px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.logo-text{font-size:16px;font-weight:700;letter-spacing:-.3px;}
+.logo-text span{color:var(--accent);}
+.hright{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.cpill{font-size:11px;font-family:var(--mono);padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .2s;}
+.cpill:hover{border-color:var(--accent);color:var(--accent);}
+.cpill.on{color:var(--accent3);border-color:rgba(62,232,160,.35);background:rgba(62,232,160,.07);}
+
+main{max-width:580px;margin:0 auto;padding:36px 18px 80px;position:relative;z-index:1;}
+.hero{text-align:center;margin-bottom:32px;}
+.hero h1{font-size:clamp(22px,6vw,34px);font-weight:700;letter-spacing:-.8px;line-height:1.15;margin-bottom:8px;}
+.hero h1 em{font-style:normal;background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.hero p{color:var(--muted);font-size:13px;}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.82);backdrop-filter:blur(8px);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;}
+.overlay.hidden{display:none;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;width:100%;max-width:460px;padding:24px;}
+.mhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.mhead h2{font-size:17px;font-weight:700;}
+.mclose{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;}
+.mclose:hover{color:var(--text);}
+.steps{display:flex;margin-bottom:22px;}
+.sdot{flex:1;text-align:center;font-size:11px;font-weight:600;color:var(--muted);position:relative;}
+.sdot::before{content:attr(data-n);display:block;width:26px;height:26px;border-radius:50%;border:2px solid var(--border);background:var(--surface2);line-height:22px;margin:0 auto 5px;font-family:var(--mono);font-size:11px;transition:all .25s;}
+.sdot::after{content:'';position:absolute;top:12px;left:50%;right:-50%;height:2px;background:var(--border);z-index:-1;}
+.sdot:last-child::after{display:none;}
+.sdot.active::before{background:var(--accent);border-color:var(--accent);color:#fff;}
+.sdot.done::before{background:var(--accent3);border-color:var(--accent3);content:'✓';color:#111;}
+.sdot.active{color:var(--text);}
+.sp{display:none;}.sp.active{display:block;}
+.sp-title{font-size:15px;font-weight:600;margin-bottom:7px;}
+.sp-desc{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:14px;}
+.sp-desc a{color:var(--accent);text-decoration:none;}
+.ibox{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:13px 15px;margin-bottom:14px;}
+.istep{display:flex;gap:9px;font-size:13px;color:var(--text);line-height:1.5;margin-bottom:7px;align-items:flex-start;}
+.istep:last-child{margin:0;}
+.inum{min-width:19px;height:19px;background:var(--accent);border-radius:50%;font-size:10px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;margin-top:2px;flex-shrink:0;}
+.mact{display:flex;gap:8px;margin-top:16px;justify-content:flex-end;}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 18px;border:none;border-radius:10px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;}
+.btn-p{background:var(--accent);color:#fff;}
+.btn-p:hover{background:#9080ff;transform:translateY(-1px);}
+.btn-p:active{transform:none;}
+.btn-p:disabled{opacity:.45;cursor:not-allowed;transform:none;}
+.btn-s{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+.btn-s:hover{border-color:var(--accent);color:var(--accent);}
+.btn-full{width:100%;justify-content:center;}
+
+/* TABS */
+.tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:5px;margin-bottom:20px;}
+.tab-btn{flex:1;padding:9px 10px;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-size:13px;font-weight:500;border-radius:10px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:5px;}
+.tab-btn:hover{color:var(--text);background:var(--surface2);}
+.tab-btn.active{background:var(--accent);color:#fff;}
+.tab-panel{display:none;}.tab-panel.active{display:block;}
+
+/* CARD */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:20px;margin-bottom:12px;}
+.card-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.9px;margin-bottom:14px;display:flex;align-items:center;gap:7px;}
+
+/* SETUP BANNER */
+.sbanner{background:linear-gradient(135deg,rgba(124,111,255,.09),rgba(255,107,157,.06));border:1px dashed rgba(124,111,255,.3);border-radius:14px;padding:14px 18px;display:flex;align-items:center;gap:12px;margin-bottom:20px;cursor:pointer;transition:all .2s;}
+.sbanner:hover{border-color:var(--accent);}
+.sbanner.hidden{display:none;}
+.sb-icon{font-size:24px;}
+.sb-text h3{font-size:13px;font-weight:600;margin-bottom:2px;}
+.sb-text p{font-size:11px;color:var(--muted);}
+.sb-arr{margin-left:auto;color:var(--accent);font-size:16px;}
+
+/* CREATOR SELECT */
+.creator-select{display:flex;gap:8px;margin-bottom:14px;}
+.creator-opt{flex:1;padding:10px 12px;border:2px solid var(--border);border-radius:10px;background:var(--surface2);cursor:pointer;text-align:center;transition:all .2s;}
+.creator-opt:hover{border-color:var(--accent);}
+.creator-opt.active{border-color:var(--accent);background:rgba(124,111,255,.1);}
+.creator-opt .co-icon{font-size:20px;margin-bottom:4px;}
+.creator-opt .co-label{font-size:12px;font-weight:600;color:var(--text);}
+.creator-opt .co-sub{font-size:10px;color:var(--muted);margin-top:1px;}
+
+select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--mono);font-size:13px;padding:10px 12px;outline:none;cursor:pointer;transition:border-color .2s;appearance:none;}
+select:focus{border-color:var(--accent);}
+.select-wrap{position:relative;}
+.select-wrap::after{content:'▾';position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;}
+
+/* FILE DROP */
+.file-drop{border:2px dashed var(--border);border-radius:12px;background:var(--surface2);padding:22px 16px;text-align:center;cursor:pointer;transition:all .2s;position:relative;display:block;}
+.file-drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.file-drop:hover{border-color:var(--accent);background:rgba(124,111,255,.05);}
+.fd-icon{font-size:26px;margin-bottom:7px;}
+.fd-text{font-size:13px;color:var(--muted);}
+.fd-name{font-size:11px;font-weight:600;color:var(--accent3);margin-top:5px;font-family:var(--mono);}
+.fmt-hint{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:3px;}
+
+/* BULK FILE LIST */
+.bulk-list{margin-top:10px;max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;}
+.bulk-item{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px;font-size:12px;}
+.bulk-item .bi-name{flex:1;font-family:var(--mono);color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.bulk-item .bi-size{color:var(--muted);font-size:11px;flex-shrink:0;}
+.bulk-item .bi-status{width:16px;height:16px;border-radius:50%;background:var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;}
+.bulk-item.success .bi-status{background:rgba(62,232,160,.2);color:var(--accent3);}
+.bulk-item.error .bi-status{background:rgba(255,107,157,.2);color:var(--accent2);}
+.bulk-item.processing .bi-status{background:rgba(124,111,255,.2);}
+.bulk-item .bi-id{font-family:var(--mono);font-size:10px;color:var(--accent3);margin-left:4px;}
+
+/* FIELD */
+.field{margin-bottom:12px;}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;}
+input[type="text"]{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--mono);font-size:13px;padding:10px 12px;outline:none;transition:border-color .2s;}
+input[type="text"]:focus{border-color:var(--accent);}
+
+/* SLIDERS */
+.sg{margin-bottom:18px;}
+.srow{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;}
+.slabel{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.sval{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--accent);background:rgba(124,111,255,.1);border:1px solid rgba(124,111,255,.2);padding:3px 10px;border-radius:6px;min-width:64px;text-align:center;}
+.sval.neg{color:var(--accent2);background:rgba(255,107,157,.1);border-color:rgba(255,107,157,.2);}
+.dtag{font-size:10px;font-family:var(--mono);color:var(--accent3);background:rgba(62,232,160,.08);border:1px solid rgba(62,232,160,.2);padding:1px 7px;border-radius:4px;margin-left:5px;}
+input[type="range"]{width:100%;height:5px;border-radius:3px;appearance:none;outline:none;cursor:pointer;background:var(--border);}
+input[type="range"]::-webkit-slider-thumb{appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);border:2px solid #fff;cursor:pointer;box-shadow:0 0 8px rgba(124,111,255,.5);transition:transform .15s;}
+input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.2);}
+.range-ends{display:flex;justify-content:space-between;margin-top:4px;}
+.range-ends span{font-size:10px;color:var(--muted);font-family:var(--mono);}
+
+/* PREVIEW */
+.preview-card{background:linear-gradient(135deg,rgba(62,232,160,.07),rgba(124,111,255,.05));border:1px solid rgba(124,111,255,.2);border-radius:14px;padding:16px;margin-bottom:12px;display:none;}
+.preview-card.show{display:block;}
+.preview-title{font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;}
+audio{width:100%;border-radius:8px;accent-color:var(--accent);}
+.preview-meta{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:6px;}
+
+/* PROGRESS */
+.pw{height:4px;background:var(--surface2);border-radius:4px;margin-top:10px;overflow:hidden;display:none;}
+.pw.show{display:block;}
+.pb{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;transition:width .3s;width:0;}
+
+/* RESULT */
+.result{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-top:12px;display:none;}
+.result.show{display:block;}
+.result.ok{border-color:rgba(62,232,160,.3);}
+.result.err{border-color:rgba(255,107,157,.3);}
+.rlbl{font-size:10px;font-family:var(--mono);color:var(--muted);margin-bottom:5px;text-transform:uppercase;}
+.rval{font-family:var(--mono);font-size:15px;color:var(--accent3);word-break:break-all;}
+.result.err .rval{color:var(--accent2);font-size:12px;white-space:pre-wrap;}
+
+/* PLAYBACK REC */
+.prec{background:linear-gradient(135deg,rgba(62,232,160,.07),rgba(124,111,255,.05));border:1px solid rgba(62,232,160,.25);border-radius:14px;padding:16px;margin-top:10px;display:none;}
+.prec-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;}
+.prec-icon{font-size:22px;}
+.prec-title{font-size:13px;font-weight:700;color:var(--accent3);}
+.prec-sub{font-size:11px;color:var(--muted);margin-top:1px;}
+.prec-speed{background:rgba(62,232,160,.08);border:1px solid rgba(62,232,160,.2);border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.prec-slabel{font-size:11px;color:var(--muted);}
+.prec-sval{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--accent3);}
+.prec-formula{font-size:11px;font-family:var(--mono);color:var(--muted);margin-bottom:12px;text-align:right;}
+.prec-code-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.prec-code{background:#0d0d18;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:var(--mono);font-size:11px;color:#c0c0e0;line-height:1.7;white-space:pre;overflow-x:auto;}
+.prec-code .kw{color:#7c6fff;}.prec-code .str{color:#f0a070;}.prec-code .num{color:#3ee8a0;}.prec-code .cm{color:#555570;}
+
+/* BULK SUMMARY */
+.bulk-summary{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-top:12px;display:none;}
+.bulk-summary.show{display:block;}
+.bs-stats{display:flex;gap:10px;margin-bottom:10px;}
+.bs-stat{flex:1;text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;}
+.bs-stat .bsn{font-size:18px;font-weight:700;font-family:var(--mono);}
+.bs-stat .bsl{font-size:10px;color:var(--muted);margin-top:1px;}
+.bs-stat.ok .bsn{color:var(--accent3);}
+.bs-stat.fail .bsn{color:var(--accent2);}
+.bs-stat.total .bsn{color:var(--accent);}
+.bs-list{max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;}
+.bs-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:11px;display:flex;align-items:center;gap:8px;}
+.bs-item.ok{border-color:rgba(62,232,160,.2);}
+.bs-item.fail{border-color:rgba(255,107,157,.2);}
+.bs-item .bsi-name{flex:1;font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.bs-item .bsi-id{color:var(--accent3);font-family:var(--mono);font-size:10px;}
+.bs-item .bsi-err{color:var(--accent2);font-size:10px;}
+
+.copy-btn{display:inline-flex;align-items:center;gap:5px;margin-top:8px;padding:5px 12px;background:rgba(124,111,255,.1);color:var(--accent);border:1px solid rgba(124,111,255,.2);border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;font-family:var(--font);}
+.copy-btn:hover{background:rgba(124,111,255,.2);}
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.tip{font-size:12px;color:var(--muted);line-height:1.5;}
+.tip code{color:var(--accent);font-family:var(--mono);}
+.btn-row{display:flex;gap:8px;}.btn-row .btn{flex:1;}
+@media(max-width:480px){main{padding:24px 14px 60px;}header{padding:12px 14px;}.creator-select{flex-direction:column;}}
+</style>
+</head>
+<body>
+
+<!-- MODAL SETUP -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="mhead"><h2>⚙️ Setup Akun Roblox</h2><button class="mclose" onclick="closeModal()">✕</button></div>
+    <div class="steps">
+      <div class="sdot active" data-n="1" id="d1">Buka</div>
+      <div class="sdot" data-n="2" id="d2">Buat Key</div>
+      <div class="sdot" data-n="3" id="d3">Simpan</div>
+    </div>
+    <div class="sp active" id="s1">
+      <div class="sp-title">Buka Roblox Creator Hub</div>
+      <div class="sp-desc">Buat API Key gratis di Roblox. Hanya perlu sekali.</div>
+      <div class="ibox">
+        <div class="istep"><div class="inum">1</div><div>Login ke akun Roblox di browser</div></div>
+        <div class="istep"><div class="inum">2</div><div>Klik tombol di bawah</div></div>
+      </div>
+      <a href="https://create.roblox.com/credentials" target="_blank" class="btn btn-p btn-full" style="text-decoration:none">🔗 Buka create.roblox.com/credentials</a>
+      <div class="mact"><button class="btn btn-p" onclick="goS(2)">Sudah dibuka →</button></div>
+    </div>
+    <div class="sp" id="s2">
+      <div class="sp-title">Buat API Key baru</div>
+      <div class="ibox">
+        <div class="istep"><div class="inum">1</div><div>Klik <strong>Create API Key</strong></div></div>
+        <div class="istep"><div class="inum">2</div><div>Nama bebas, contoh: <em>"Audio Uploader"</em></div></div>
+        <div class="istep"><div class="inum">3</div><div><strong>Access Permissions</strong> → <strong>Assets</strong> → tambah <strong>Read &amp; Write</strong></div></div>
+        <div class="istep"><div class="inum">4</div><div>Klik <strong>Save &amp; Generate Key</strong></div></div>
+        <div class="istep"><div class="inum">5</div><div>Copy API Key <strong>(hanya tampil sekali!)</strong></div></div>
+      </div>
+      <div class="mact">
+        <button class="btn btn-s" onclick="goS(1)">← Kembali</button>
+        <button class="btn btn-p" onclick="goS(3)">Sudah punya key →</button>
+      </div>
+    </div>
+    <div class="sp" id="s3">
+      <div class="sp-title">Masukkan API Key &amp; User ID</div>
+      <div class="sp-desc">Tersimpan di browser kamu saja.</div>
+      <div class="field">
+        <label>API Key Roblox</label>
+        <input type="text" id="mApiKey" placeholder="Paste API Key dari Roblox...">
+      </div>
+      <div class="field">
+        <label>User ID kamu</label>
+        <input type="text" id="mUserId" placeholder="Contoh: 123456789">
+        <p class="tip" style="margin-top:5px">Lihat di URL profil: roblox.com/users/<strong>ID</strong>/profile</p>
+      </div>
+      <div class="mact">
+        <button class="btn btn-s" onclick="goS(2)">← Kembali</button>
+        <button class="btn btn-p" onclick="saveClose()">✓ Simpan &amp; Mulai</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div class="logo">🎵</div>
+  <span class="logo-text">Audio<span>Uploader</span></span>
+  <div class="hright">
+    <button class="cpill" id="connBtn" onclick="openModal()">⚙️ Setup</button>
+  </div>
+</header>
+
+<main>
+  <div class="hero">
+    <h1>Upload Musik ke<br><em>Roblox</em> Otomatis</h1>
+    <p>Single & Bulk upload · Speed & Amplify · Personal & Komunitas</p>
+  </div>
+
+  <div class="sbanner" id="setupBanner" onclick="openModal()">
+    <div class="sb-icon">🔑</div>
+    <div class="sb-text"><h3>Hubungkan akun Roblox kamu</h3><p>Setup API Key sekali, langsung bisa upload</p></div>
+    <div class="sb-arr">→</div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('single',this)">🎵 Single Upload</button>
+    <button class="tab-btn" onclick="switchTab('bulk',this)">📦 Bulk Upload</button>
+  </div>
+
+  <!-- AUDIO SETTINGS (shared) -->
+  <div class="card">
+    <div class="card-label">⚙️ Audio Settings</div>
+    <div class="sg">
+      <div class="srow">
+        <span class="slabel">Speed <span class="dtag">default 2.3x</span></span>
+        <span class="sval" id="speedVal">2.30x</span>
+      </div>
+      <input type="range" id="speedSlider" min="0.5" max="5" step="0.05" value="2.3" oninput="updateSliders()">
+      <div class="range-ends"><span>0.5x</span><span>5.0x</span></div>
+    </div>
+    <div class="sg" style="margin-bottom:0">
+      <div class="srow">
+        <span class="slabel">Amplify <span class="dtag">default -4dB</span></span>
+        <span class="sval neg" id="ampVal">-4.0 dB</span>
+      </div>
+      <input type="range" id="ampSlider" min="-20" max="20" step="0.5" value="-4" oninput="updateSliders()">
+      <div class="range-ends"><span>-20dB</span><span>+20dB</span></div>
+    </div>
+  </div>
+
+  <!-- UPLOAD TARGET -->
+  <div class="card">
+    <div class="card-label">👤 Upload Ke</div>
+    <div class="creator-select">
+      <div class="creator-opt active" id="optPersonal" onclick="selectCreator('personal')">
+        <div class="co-icon">👤</div>
+        <div class="co-label">Akun Pribadi</div>
+        <div class="co-sub">Upload ke akunmu</div>
+      </div>
+      <div class="creator-opt" id="optGroup" onclick="selectCreator('group')">
+        <div class="co-icon">👥</div>
+        <div class="co-label">Komunitas</div>
+        <div class="co-sub">Upload ke group</div>
+      </div>
+    </div>
+    <div id="groupPickerWrap" style="display:none">
+      <div class="field" style="margin-bottom:0">
+        <label>Pilih Komunitas</label>
+        <div class="select-wrap">
+          <select id="groupSelect"><option value="">Loading komunitas...</option></select>
+        </div>
+        <p class="tip" style="margin-top:6px">Hanya komunitas dimana kamu punya rank ≥ 200 atau owner yang tampil.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SINGLE TAB -->
+  <div class="tab-panel active" id="tab-single">
+    <div class="card">
+      <div class="card-label">🎵 File Audio</div>
+      <label class="file-drop" id="fileDrop">
+        <input type="file" id="audioFile" accept=".mp3,.ogg,.wav,.flac,.aac" onchange="onFileChange()">
+        <div class="fd-icon">📂</div>
+        <div class="fd-text">Tap atau drag file audio ke sini</div>
+        <div class="fd-name" id="fdName"></div>
+        <div class="fmt-hint">.mp3 · .ogg · .wav · .flac · .aac</div>
+      </label>
+    </div>
+    <div class="card">
+      <div class="card-label">📝 Info Asset</div>
+      <div class="field">
+        <label>Nama Audio</label>
+        <input type="text" id="audioName" placeholder="Nama yang tampil di Roblox">
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label>Deskripsi (opsional)</label>
+        <input type="text" id="audioDesc" placeholder="Deskripsi audio">
+      </div>
+    </div>
+
+    <div class="preview-card" id="previewCard">
+      <div class="preview-title">🎧 Preview Hasil Proses</div>
+      <audio id="previewPlayer" controls></audio>
+      <div class="preview-meta" id="previewMeta"></div>
+    </div>
+
+    <div class="btn-row" style="margin-bottom:10px">
+      <button class="btn btn-s btn-full" id="btnPreview" onclick="doPreview()">🎧 Preview</button>
+      <button class="btn btn-p btn-full" id="btnUpload" onclick="doUpload()">⬆️ Upload</button>
+    </div>
+    <div class="pw" id="pw"><div class="pb" id="pb"></div></div>
+
+    <div class="result" id="result">
+      <div class="rlbl" id="rlbl">Asset ID</div>
+      <div class="rval" id="rval"></div>
+      <button class="copy-btn" id="copyBtn" onclick="copyId()" style="display:none">📋 Copy ID</button>
+    </div>
+
+    <div class="prec" id="prec">
+      <div class="prec-head">
+        <div class="prec-icon">🎯</div>
+        <div><div class="prec-title">Rekomendasi PlaybackSpeed</div><div class="prec-sub">Agar musik terdengar normal di game</div></div>
+      </div>
+      <div class="prec-speed">
+        <div class="prec-slabel">PlaybackSpeed yang harus dipakai</div>
+        <div class="prec-sval" id="precSval">0.4348</div>
+      </div>
+      <div class="prec-formula" id="precFormula">1 ÷ 2.3x = 0.4348</div>
+      <div class="prec-code-label">📋 Script siap pakai</div>
+      <div class="prec-code" id="precCode"></div>
+      <button class="copy-btn btn-full" style="margin-top:8px;justify-content:center" onclick="copyScript()">📋 Copy Script</button>
+    </div>
+
+    <button class="btn btn-s btn-full" style="margin-top:10px;font-size:12px;opacity:.6" onclick="resetSingle()">🔄 Reset</button>
+  </div>
+
+  <!-- BULK TAB -->
+  <div class="tab-panel" id="tab-bulk">
+    <div class="card">
+      <div class="card-label">📦 File Audio (bisa pilih banyak)</div>
+      <label class="file-drop" id="bulkDrop">
+        <input type="file" id="bulkFiles" accept=".mp3,.ogg,.wav,.flac,.aac" multiple onchange="onBulkChange()">
+        <div class="fd-icon">📂</div>
+        <div class="fd-text">Tap atau drag beberapa file sekaligus</div>
+        <div class="fd-name" id="bulkCount"></div>
+        <div class="fmt-hint">.mp3 · .ogg · .wav · .flac · .aac · max 50 file</div>
+      </label>
+      <div class="bulk-list" id="bulkList"></div>
+    </div>
+    <div class="card">
+      <div class="card-label">📝 Prefix Nama (opsional)</div>
+      <div class="field" style="margin-bottom:0">
+        <label>Prefix</label>
+        <input type="text" id="bulkPrefix" placeholder="Contoh: BGM — nama file akan jadi 'BGM namafile'">
+      </div>
+    </div>
+
+    <button class="btn btn-p btn-full" id="btnBulk" onclick="doBulk()" style="margin-bottom:10px">⬆️ Bulk Upload Semua</button>
+    <div class="pw" id="bpw"><div class="pb" id="bpb"></div></div>
+
+    <div class="bulk-summary" id="bulkSummary">
+      <div class="bs-stats">
+        <div class="bs-stat total"><div class="bsn" id="bsTotal">0</div><div class="bsl">Total</div></div>
+        <div class="bs-stat ok"><div class="bsn" id="bsOk">0</div><div class="bsl">Berhasil</div></div>
+        <div class="bs-stat fail"><div class="bsn" id="bsFail">0</div><div class="bsl">Gagal</div></div>
+      </div>
+      <div class="bs-list" id="bsList"></div>
+      <button class="copy-btn btn-full" style="margin-top:8px;justify-content:center" onclick="copyBulkIds()">📋 Copy Semua Asset ID</button>
+    </div>
+  </div>
+</main>
+
+<script>
+let apiKey = localStorage.getItem('rblx_key') || '';
+let userId = localStorage.getItem('rblx_uid') || '';
+let currentFile = null;
+let creatorType = 'personal';
+let previewUrl = null;
+let bulkResults = [];
+
+window.onload = () => {
+  if (apiKey && userId) { setConnected(); loadGroups(); }
+  else setTimeout(openModal, 500);
+  updateSliders();
+};
+
+// MODAL
+function openModal() { document.getElementById('overlay').classList.remove('hidden'); if(apiKey)document.getElementById('mApiKey').value=apiKey; if(userId)document.getElementById('mUserId').value=userId; goS(apiKey?3:1); }
+function closeModal() { document.getElementById('overlay').classList.add('hidden'); }
+function goS(n) {
+  for(let i=1;i<=3;i++){
+    const d=document.getElementById('d'+i);
+    document.getElementById('s'+i).classList.toggle('active',i===n);
+    d.classList.remove('active','done');
+    if(i<n)d.classList.add('done'); else if(i===n)d.classList.add('active');
+  }
+}
+function saveClose() {
+  const k=document.getElementById('mApiKey').value.trim();
+  const u=document.getElementById('mUserId').value.trim();
+  if(!k){alert('Masukkan API Key dulu!');return;}
+  if(!u){alert('Masukkan User ID dulu!');return;}
+  apiKey=k;userId=u;
+  localStorage.setItem('rblx_key',k);localStorage.setItem('rblx_uid',u);
+  closeModal();setConnected();loadGroups();
+}
+function setConnected(){
+  const btn=document.getElementById('connBtn');
+  btn.textContent='✓ Terhubung';btn.className='cpill on';
+  document.getElementById('setupBanner').classList.add('hidden');
+}
+
+// TABS
+function switchTab(name,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// CREATOR SELECT
+function selectCreator(type){
+  creatorType=type;
+  document.getElementById('optPersonal').classList.toggle('active',type==='personal');
+  document.getElementById('optGroup').classList.toggle('active',type==='group');
+  document.getElementById('groupPickerWrap').style.display=type==='group'?'block':'none';
+}
+
+async function loadGroups(){
+  if(!userId) return;
+  try {
+    const res = await fetch(`/api/groups?userId=${userId}&apiKey=${encodeURIComponent(apiKey)}`);
+    const data = await res.json();
+    const sel = document.getElementById('groupSelect');
+    if(data.groups && data.groups.length > 0){
+      sel.innerHTML = data.groups.map(g=>`<option value="${g.id}">${g.name} (${g.role||'Member'})</option>`).join('');
+    } else {
+      sel.innerHTML = '<option value="">Tidak ada komunitas ditemukan</option>';
+    }
+  } catch(e) {
+    document.getElementById('groupSelect').innerHTML = '<option value="">Gagal load komunitas</option>';
+  }
+}
+
+// SLIDERS
+function updateSliders(){
+  const sp=parseFloat(document.getElementById('speedSlider').value);
+  const amp=parseFloat(document.getElementById('ampSlider').value);
+  document.getElementById('speedVal').textContent=sp.toFixed(2)+'x';
+  const ae=document.getElementById('ampVal');
+  ae.textContent=(amp>=0?'+':'')+amp.toFixed(1)+' dB';
+  ae.className='sval'+(amp<0?' neg':'');
+  const spP=((sp-.5)/(5-.5))*100;
+  document.getElementById('speedSlider').style.background=`linear-gradient(to right,var(--accent) ${spP}%,var(--border) ${spP}%)`;
+  const apP=((amp-(-20))/(40))*100;
+  document.getElementById('ampSlider').style.background=`linear-gradient(to right,var(--accent2) ${apP}%,var(--border) ${apP}%)`;
+}
+
+// FILE (SINGLE)
+function onFileChange(){
+  const file=document.getElementById('audioFile').files[0];
+  if(!file)return;
+  currentFile=file;
+  document.getElementById('fdName').textContent='📄 '+file.name;
+  if(!document.getElementById('audioName').value)
+    document.getElementById('audioName').value=file.name.replace(/\.[^.]+$/,'');
+  document.getElementById('previewCard').classList.remove('show');
+  document.getElementById('result').className='result';
+  document.getElementById('prec').style.display='none';
+}
+
+// FILE (BULK)
+function onBulkChange(){
+  const files=Array.from(document.getElementById('bulkFiles').files);
+  document.getElementById('bulkCount').textContent=`📁 ${files.length} file dipilih`;
+  const list=document.getElementById('bulkList');
+  list.innerHTML=files.map((f,i)=>`
+    <div class="bulk-item" id="bi-${i}">
+      <div class="bi-status" id="bis-${i}">·</div>
+      <div class="bi-name">${f.name}</div>
+      <div class="bi-size">${(f.size/1024/1024).toFixed(1)}MB</div>
+    </div>`).join('');
+  document.getElementById('bulkSummary').classList.remove('show');
+  bulkResults=[];
+}
+
+// PREVIEW
+async function doPreview(){
+  if(!currentFile){alert('Pilih file dulu!');return;}
+  setBtn('btnPreview',true,'Memproses...');showProg('pw','pb');
+  try {
+    const fd=new FormData();
+    fd.append('audio',currentFile);
+    fd.append('speed',document.getElementById('speedSlider').value);
+    fd.append('amplify',document.getElementById('ampSlider').value);
+    const res=await fetch('/api/preview',{method:'POST',body:fd});
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error);
+    if(previewUrl)URL.revokeObjectURL(previewUrl);
+    const blob=new Blob([Uint8Array.from(atob(data.audio),c=>c.charCodeAt(0))],{type:'audio/mp3'});
+    previewUrl=URL.createObjectURL(blob);
+    document.getElementById('previewPlayer').src=previewUrl;
+    document.getElementById('previewMeta').textContent=
+      `Speed: ${document.getElementById('speedSlider').value}x  |  Amplify: ${document.getElementById('ampSlider').value}dB  |  Size: ${(data.size/1024).toFixed(1)}KB`;
+    document.getElementById('previewCard').classList.add('show');
+  } catch(e){alert('Preview gagal: '+e.message);}
+  hideProg('pw','pb');setBtn('btnPreview',false,'🎧 Preview');
+}
+
+// SINGLE UPLOAD
+async function doUpload(){
+  if(!apiKey){alert('Setup API Key dulu!');openModal();return;}
+  if(!currentFile){alert('Pilih file dulu!');return;}
+  const name=document.getElementById('audioName').value.trim();
+  if(!name){alert('Masukkan nama audio!');return;}
+  if(creatorType==='group'&&!document.getElementById('groupSelect').value){alert('Pilih komunitas dulu!');return;}
+
+  setBtn('btnUpload',true,'Uploading...');showProg('pw','pb');
+
+  try {
+    const fd=new FormData();
+    fd.append('audio',currentFile);
+    fd.append('apiKey',apiKey);
+    fd.append('userId',userId);
+    fd.append('name',name);
+    fd.append('description',document.getElementById('audioDesc').value.trim());
+    fd.append('speed',document.getElementById('speedSlider').value);
+    fd.append('amplify',document.getElementById('ampSlider').value);
+    if(creatorType==='group') fd.append('groupId',document.getElementById('groupSelect').value);
+
+    const res=await fetch('/api/process-upload',{method:'POST',body:fd});
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error);
+
+    hideProg('pw','pb');
+    const result=document.getElementById('result');
+    result.className='result show ok';
+    document.getElementById('rlbl').textContent='✅ Asset ID Baru';
+    document.getElementById('rval').textContent=String(data.assetId).replace('pending:','');
+    document.getElementById('copyBtn').style.display='inline-flex';
+    window._lastId=String(data.assetId).replace('pending:','');
+    window._lastName=name;
+
+    // Playback speed recommendation
+    const sp=parseFloat(document.getElementById('speedSlider').value);
+    const ps=Math.round((1/sp)*10000)/10000;
+    window._lastPs=ps;
+    document.getElementById('precSval').textContent=ps.toFixed(4);
+    document.getElementById('precFormula').textContent=`1 ÷ ${sp.toFixed(2)}x = ${ps.toFixed(4)}`;
+    document.getElementById('precCode').innerHTML=genScript(window._lastId,ps,name);
+    document.getElementById('prec').style.display='block';
+
+  } catch(e){
+    hideProg('pw','pb');
+    const result=document.getElementById('result');
+    result.className='result show err';
+    document.getElementById('rlbl').textContent='❌ Error';
+    document.getElementById('rval').textContent=e.message;
+    document.getElementById('copyBtn').style.display='none';
+    document.getElementById('prec').style.display='none';
+  }
+  setBtn('btnUpload',false,'⬆️ Upload');
+}
+
+// BULK UPLOAD
+async function doBulk(){
+  if(!apiKey){alert('Setup API Key dulu!');openModal();return;}
+  const files=document.getElementById('bulkFiles').files;
+  if(!files.length){alert('Pilih file dulu!');return;}
+  if(creatorType==='group'&&!document.getElementById('groupSelect').value){alert('Pilih komunitas dulu!');return;}
+
+  setBtn('btnBulk',true,`Uploading 0/${files.length}...`);
+  showProg('bpw','bpb');
+  bulkResults=[];
+
+  const fd=new FormData();
+  Array.from(files).forEach(f=>fd.append('audio',f));
+  fd.append('apiKey',apiKey);
+  fd.append('userId',userId);
+  fd.append('speed',document.getElementById('speedSlider').value);
+  fd.append('amplify',document.getElementById('ampSlider').value);
+  fd.append('namePrefix',document.getElementById('bulkPrefix').value.trim());
+  if(creatorType==='group') fd.append('groupId',document.getElementById('groupSelect').value);
+
+  let okCount=0, failCount=0;
+  document.getElementById('bulkSummary').classList.add('show');
+
+  try {
+    const res=await fetch('/api/bulk-upload',{method:'POST',body:fd});
+    const reader=res.body.getReader();
+    const decoder=new TextDecoder();
+    let buf='';
+
+    while(true){
+      const {done,value}=await reader.read();
+      if(done)break;
+      buf+=decoder.decode(value,{stream:true});
+      const lines=buf.split('\n');
+      buf=lines.pop();
+      for(const line of lines){
+        if(!line.startsWith('data:'))continue;
+        try{
+          const ev=JSON.parse(line.slice(5));
+          if(ev.type==='progress'){
+            const pct=((ev.index+1)/ev.total)*100;
+            document.getElementById('bpb').style.width=pct+'%';
+            setBtn('btnBulk',true,`Uploading ${ev.index+1}/${ev.total}...`);
+            const item=document.getElementById('bi-'+ev.index);
+            const status=document.getElementById('bis-'+ev.index);
+            if(ev.status==='processing'){
+              if(item)item.className='bulk-item processing';
+              if(status)status.innerHTML='<span class="spinner" style="width:10px;height:10px;border-width:1.5px"></span>';
+            } else if(ev.status==='success'){
+              if(item){item.className='bulk-item success';item.insertAdjacentHTML('beforeend',`<span class="bi-id">${ev.assetId}</span>`);}
+              if(status)status.textContent='✓';
+              okCount++;
+            } else if(ev.status==='error'){
+              if(item)item.className='bulk-item error';
+              if(status)status.textContent='✗';
+              failCount++;
+            }
+            document.getElementById('bsTotal').textContent=ev.total;
+            document.getElementById('bsOk').textContent=okCount;
+            document.getElementById('bsFail').textContent=failCount;
+          } else if(ev.type==='done'){
+            bulkResults=ev.results||[];
+            renderBulkSummary(ev.results);
+          }
+        }catch(e){}
+      }
+    }
+  }catch(e){alert('Bulk upload error: '+e.message);}
+
+  hideProg('bpw','bpb');
+  setBtn('btnBulk',false,'⬆️ Bulk Upload Semua');
+}
+
+function renderBulkSummary(results){
+  const list=document.getElementById('bsList');
+  list.innerHTML=results.map(r=>`
+    <div class="bs-item ${r.status==='success'?'ok':'fail'}">
+      <span>${r.status==='success'?'✅':'❌'}</span>
+      <span class="bsi-name">${r.name}</span>
+      ${r.status==='success'?`<span class="bsi-id">${r.assetId}</span>`:`<span class="bsi-err">${r.error||'error'}</span>`}
+    </div>`).join('');
+}
+
+function copyBulkIds(){
+  const ids=bulkResults.filter(r=>r.status==='success').map(r=>`${r.name}: ${r.assetId}`).join('\n');
+  if(!ids){alert('Belum ada yang berhasil diupload');return;}
+  navigator.clipboard.writeText(ids).then(()=>alert('✓ Semua Asset ID tersalin!'));
+}
+
+// HELPERS
+function genScript(id,ps,name){
+  return `<span class="cm">-- ${name}</span>
+<span class="cm">-- PlaybackSpeed kompensasi speed ${(1/ps).toFixed(2)}x</span>
+<span class="kw">local</span> sound = Instance.new(<span class="str">"Sound"</span>)
+sound.SoundId = <span class="str">"rbxassetid://${id}"</span>
+sound.PlaybackSpeed = <span class="num">${ps.toFixed(4)}</span>
+sound.Volume = <span class="num">1</span>
+sound.Looped = <span class="kw">true</span>
+sound.Parent = workspace
+sound:Play()`;
+}
+
+function copyId(){
+  if(window._lastId){
+    navigator.clipboard.writeText(window._lastId).then(()=>{
+      const b=document.getElementById('copyBtn');
+      b.textContent='✓ Tersalin!';setTimeout(()=>b.textContent='📋 Copy ID',1500);
+    });
+  }
+}
+
+function copyScript(){
+  const raw=`-- ${window._lastName}\n-- PlaybackSpeed kompensasi speed ${(1/window._lastPs).toFixed(2)}x\nlocal sound = Instance.new("Sound")\nsound.SoundId = "rbxassetid://${window._lastId}"\nsound.PlaybackSpeed = ${(window._lastPs||1).toFixed(4)}\nsound.Volume = 1\nsound.Looped = true\nsound.Parent = workspace\nsound:Play()`;
+  navigator.clipboard.writeText(raw).then(()=>{
+    const btns=document.querySelectorAll('.prec .copy-btn');
+    btns.forEach(b=>{b.textContent='✓ Tersalin!';setTimeout(()=>b.textContent='📋 Copy Script',1500);});
+  });
+}
+
+function resetSingle(){
+  currentFile=null;
+  document.getElementById('audioFile').value='';
+  document.getElementById('fdName').textContent='';
+  document.getElementById('audioName').value='';
+  document.getElementById('audioDesc').value='';
+  document.getElementById('previewCard').classList.remove('show');
+  document.getElementById('result').className='result';
+  document.getElementById('prec').style.display='none';
+  if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=null;}
+}
+
+let progIv={};
+function showProg(wid,bid){
+  const w=document.getElementById(wid);const b=document.getElementById(bid);
+  w.classList.add('show');b.style.width='0%';
+  clearInterval(progIv[wid]);
+  let v=0;
+  progIv[wid]=setInterval(()=>{v=Math.min(v+Math.random()*7,85);b.style.width=v+'%';},350);
+}
+function hideProg(wid,bid){
+  clearInterval(progIv[wid]);
+  document.getElementById(bid).style.width='100%';
+  setTimeout(()=>{document.getElementById(wid).classList.remove('show');document.getElementById(bid).style.width='0%';},600);
+}
+function setBtn(id,loading,text){
+  const b=document.getElementById(id);
+  b.disabled=loading;
+  b.innerHTML=loading?`<span class="spinner"></span> ${text}`:text;
+}
+</script>
+</body>
+</html>
