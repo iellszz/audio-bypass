@@ -1031,21 +1031,41 @@ async function doReuploadId() {
     updateReidRow(i, item.name, 'fetching', null, null, null);
 
     try {
-      // STEP 1: Fetch audio CLIENT-SIDE via corsproxy (browser fetch, not server)
-      const assetUrl = `https://assetdelivery.roblox.com/v1/asset/?id=${item.assetId}`;
-      const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(assetUrl)}`;
-
+      // STEP 1: Try fetch CLIENT-SIDE first via corsproxy
+      // If fails (403), fallback to SERVER-SIDE fetch
       let audioBlob;
+      const assetUrl = `https://assetdelivery.roblox.com/v1/asset/?id=${item.assetId}`;
+
       try {
+        const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(assetUrl)}`;
         const fetchRes = await Promise.race([
           fetch(proxyUrl),
-          new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout 30s')), 30000))
+          new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout')), 15000))
         ]);
-        if (!fetchRes.ok) throw new Error(`HTTP ${fetchRes.status}`);
-        audioBlob = await fetchRes.blob();
-        if (audioBlob.size < 1000) throw new Error('File terlalu kecil, kemungkinan bukan audio');
-      } catch(fe) {
-        throw new Error(`Gagal fetch asset ${item.assetId}: ${fe.message}`);
+        if (fetchRes.ok) {
+          const blob = await fetchRes.blob();
+          if (blob.size > 1000) {
+            audioBlob = blob;
+            console.log(`Client fetch OK for ${item.assetId}: ${blob.size} bytes`);
+          }
+        }
+      } catch(e) {
+        console.log(`Client fetch failed for ${item.assetId}, trying server...`);
+      }
+
+      // Fallback: server-side fetch
+      if (!audioBlob) {
+        updateReidRow(i, item.name, 'fetching-server', null, null, null);
+        const serverFetchRes = await Promise.race([
+          fetch(`/api/fetch-asset?id=${item.assetId}`),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('Server fetch timeout 30s')), 30000))
+        ]);
+        if (!serverFetchRes.ok) {
+          const err = await serverFetchRes.json();
+          throw new Error(err.error || `Server fetch gagal: HTTP ${serverFetchRes.status}`);
+        }
+        audioBlob = await serverFetchRes.blob();
+        if (audioBlob.size < 1000) throw new Error('File terlalu kecil, bukan audio valid');
       }
 
       updateReidRow(i, item.name, 'uploading', null, null, null);
@@ -1095,7 +1115,7 @@ function updateReidRow(index, name, status, assetId, playbackSpeed, error) {
   const existingRow = document.getElementById('reid-row-'+index);
 
   const icons = { fetching:'⏳', uploading:'⬆️', success:'✅', error:'❌' };
-  const statusText = { fetching:'Fetching audio...', uploading:'Uploading ke Roblox...', success:'', error:'' };
+  const statusText = { fetching:'Fetching audio...', 'fetching-server':'Fetching via server...', uploading:'Uploading ke Roblox...', success:'', error:'' };
 
   let content = '';
   if (status === 'success') {
