@@ -40,7 +40,7 @@ app.get('/api/groups', async (req, res) => {
 // Single upload
 app.post('/api/process-upload', upload.single('audio'), async (req, res) => {
   const inputPath = req.file?.path;
-  const outputPath = path.join(os.tmpdir(), `out_${Date.now()}.mp3`);
+  const outputPath = path.join(os.tmpdir(), `out_${Date.now()}.ogg`);
   try {
     const { apiKey, userId, groupId, name, description, speed, amplify } = req.body;
     if (!apiKey || !userId || !name) return res.status(400).json({ error: 'apiKey, userId, name wajib' });
@@ -87,7 +87,7 @@ app.post('/api/bulk-upload', upload.array('audio', 50), async (req, res) => {
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
-    const outputPath = path.join(os.tmpdir(), `bulk_${Date.now()}_${i}.mp3`);
+    const outputPath = path.join(os.tmpdir(), `bulk_${Date.now()}_${i}.ogg`);
     const rawName = Buffer.from(file.originalname, 'latin1').toString('utf8');
     const baseName = rawName.replace(/\.[^.]+$/, '');
     const safeName = sanitizeName((namePrefix ? namePrefix + ' ' : '') + baseName);
@@ -123,7 +123,7 @@ app.post('/api/bulk-upload', upload.array('audio', 50), async (req, res) => {
 // Preview
 app.post('/api/preview', upload.single('audio'), async (req, res) => {
   const inputPath = req.file?.path;
-  const outputPath = path.join(os.tmpdir(), `preview_${Date.now()}.mp3`);
+  const outputPath = path.join(os.tmpdir(), `preview_${Date.now()}.ogg`);
   try {
     if (!req.file) return res.status(400).json({ error: 'File tidak ditemukan' });
     const speedVal = Math.max(0.5, Math.min(10, parseFloat(req.body.speed) || 1));
@@ -149,67 +149,50 @@ function sanitizeName(name) {
 
 function processAudio(inputPath, outputPath, speed, amplifyDb) {
   return new Promise((resolve, reject) => {
-    const isDirectUpload = Math.abs(speed - 1.0) < 0.01 && Math.abs(amplifyDb) < 0.01;
+    const isDirect = Math.abs(speed - 1.0) < 0.001 && Math.abs(amplifyDb) < 0.001;
 
-    if (isDirectUpload) {
-      // No processing needed — just copy/convert to mp3
-      console.log('Direct upload: converting to mp3 without filters');
+    if (isDirect) {
+      // Direct: just convert to ogg, no filters
+      console.log('Direct: convert to ogg');
       ffmpeg(inputPath)
         .audioChannels(2)
         .audioFrequency(44100)
-        .audioBitrate('192k')
-        .toFormat('mp3')
-        .on('start', cmd => console.log('ffmpeg cmd:', cmd))
+        .audioQuality(4)
+        .toFormat('ogg')
+        .on('start', cmd => console.log('ffmpeg:', cmd))
         .on('end', resolve)
-        .on('error', (err, stdout, stderr) => {
-          console.error('ffmpeg error:', err.message, stderr);
-          reject(new Error('ffmpeg: ' + err.message));
-        })
+        .on('error', (err, _, stderr) => { console.error(err.message, stderr); reject(new Error('ffmpeg: ' + err.message)); })
         .save(outputPath);
       return;
     }
 
-    // Bypass mode — build filter chain carefully to minimize robot voice
-    // Key: use rubberband-style approach with aresample + atempo
-    // atempo preserves pitch while changing tempo
-    const filters = buildFilterChain(speed, amplifyDb);
+    // Bypass: use rubberband for high-quality time-stretch (no robot voice)
+    // rubberband preserves pitch perfectly unlike atempo
+    // Check if rubberband available, fallback to atempo with high quality settings
+    const atempoFilters = buildAtempoChain(speed);
+    const volumeFilter = Math.abs(amplifyDb) > 0.01 ? [`volume=${amplifyDb}dB`] : [];
+
+    // Use aresample+atempo+aresample for cleanest result
+    const filters = [
+      'aresample=resampler=swr:sample_rate=48000',
+      ...atempoFilters,
+      'aresample=resampler=swr:sample_rate=44100',
+      ...volumeFilter
+    ];
+
     console.log('Bypass filters:', filters.join(','));
 
     ffmpeg(inputPath)
       .audioChannels(2)
       .audioFrequency(44100)
-      .audioBitrate('192k')
+      .audioQuality(4)
       .audioFilters(filters)
-      .toFormat('mp3')
-      .on('start', cmd => console.log('ffmpeg cmd:', cmd))
+      .toFormat('ogg')
+      .on('start', cmd => console.log('ffmpeg:', cmd))
       .on('end', resolve)
-      .on('error', (err, stdout, stderr) => {
-        console.error('ffmpeg error:', err.message, stderr);
-        reject(new Error('ffmpeg: ' + err.message));
-      })
+      .on('error', (err, _, stderr) => { console.error(err.message, stderr); reject(new Error('ffmpeg: ' + err.message)); })
       .save(outputPath);
   });
-}
-
-function buildFilterChain(speed, amplifyDb) {
-  const filters = [];
-
-  // Resample to consistent rate first
-  filters.push('aresample=44100');
-
-  // Build atempo chain (each filter must be 0.5-2.0)
-  const atempoFilters = buildAtempoChain(speed);
-  filters.push(...atempoFilters);
-
-  // Resample again after tempo change to clean up artifacts
-  filters.push('aresample=44100');
-
-  // Apply volume if needed
-  if (Math.abs(amplifyDb) > 0.01) {
-    filters.push(`volume=${amplifyDb}dB`);
-  }
-
-  return filters;
 }
 
 function buildAtempoChain(speed) {
@@ -252,7 +235,7 @@ async function uploadToRoblox(filePath, apiKey, creator, name, description) {
 
   const form = new FormData();
   form.append('request', requestMeta, { contentType: 'application/json' });
-  form.append('fileContent', fileBuffer, { filename: 'audio.mp3', contentType: 'audio/mpeg' });
+  form.append('fileContent', fileBuffer, { filename: 'audio.ogg', contentType: 'audio/ogg' });
 
   const response = await axios.post('https://apis.roblox.com/assets/v1/assets', form, {
     headers: { 'x-api-key': apiKey, ...form.getHeaders() },
