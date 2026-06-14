@@ -272,18 +272,18 @@ audio{width:100%;border-radius:8px;accent-color:var(--accent);}
     <div class="card-label">⚙️ Audio Settings</div>
     <div class="sg">
       <div class="srow">
-        <span class="slabel">Speed <span class="dtag">default 2.3x</span></span>
-        <span class="sval" id="speedVal">2.30x</span>
+        <span class="slabel">Speed <span class="dtag">default 2.3256x</span></span>
+        <span class="sval" id="speedVal">2.3256x</span>
       </div>
-      <input type="range" id="speedSlider" min="0.5" max="5" step="0.05" value="2.3" oninput="updateSliders()">
+      <input type="range" id="speedSlider" min="0.5" max="5" step="0.0001" value="2.3256" oninput="updateSliders()">
       <div class="range-ends"><span>0.5x</span><span>5.0x</span></div>
     </div>
     <div class="sg" style="margin-bottom:0">
       <div class="srow">
-        <span class="slabel">Amplify <span class="dtag">default -4dB</span></span>
+        <span class="slabel">Amplify <span class="dtag">default 0dB</span></span>
         <span class="sval neg" id="ampVal">-4.0 dB</span>
       </div>
-      <input type="range" id="ampSlider" min="-20" max="20" step="0.5" value="-4" oninput="updateSliders()">
+      <input type="range" id="ampSlider" min="-20" max="20" step="0.5" value="0" oninput="updateSliders()">
       <div class="range-ends"><span>-20dB</span><span>+20dB</span></div>
     </div>
   </div>
@@ -368,7 +368,7 @@ audio{width:100%;border-radius:8px;accent-color:var(--accent);}
         <div class="prec-slabel">PlaybackSpeed yang harus dipakai</div>
         <div class="prec-sval" id="precSval">0.4348</div>
       </div>
-      <div class="prec-formula" id="precFormula">1 ÷ 2.3x = 0.4348</div>
+      <div class="prec-formula" id="precFormula">1 ÷ 2.3256x = 0.4300</div>
       <div class="prec-code-label">📋 Entry Lua siap pakai</div>
       <div class="prec-code" id="precCode"></div>
       <button class="copy-btn btn-full" style="margin-top:8px;justify-content:center" onclick="copyScript()">📋 Copy Entry</button>
@@ -750,10 +750,13 @@ function resetSingle(){
   document.getElementById('fdName').textContent='';
   document.getElementById('audioName').value='';
   document.getElementById('audioDesc').value='';
+  document.getElementById('speedSlider').value=2.3256;
+  document.getElementById('ampSlider').value=0;
   document.getElementById('previewCard').classList.remove('show');
   document.getElementById('result').className='result';
   document.getElementById('prec').style.display='none';
   if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=null;}
+  updateSliders();
 }
 
 let progIv={};
