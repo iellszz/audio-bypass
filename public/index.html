@@ -3,664 +3,1364 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Roblox Audio Uploader</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>SoundForge — Roblox Audio Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#080810;--surface:#0f0f1a;--surface2:#171726;--border:#252538;--accent:#7c6fff;--accent2:#ff6b9d;--accent3:#3ee8a0;--text:#e8e8f4;--muted:#60608a;--font:'Space Grotesk',sans-serif;--mono:'JetBrains Mono',monospace;}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;}
-body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse 60% 40% at 50% 0%,rgba(124,111,255,.08) 0%,transparent 70%);pointer-events:none;}
+:root {
+  --bg: #06060E;
+  --bg1: #0A0A16;
+  --bg2: #0F0F1E;
+  --bg3: #141428;
+  --border: rgba(139,92,246,0.15);
+  --border2: rgba(255,255,255,0.06);
+  --violet: #8B5CF6;
+  --violet2: #A78BFA;
+  --cyan: #06B6D4;
+  --pink: #EC4899;
+  --green: #10B981;
+  --yellow: #F59E0B;
+  --text: #F1F0FF;
+  --text2: #A09EC0;
+  --text3: #6B68A0;
+  --font: 'Inter', sans-serif;
+  --display: 'Syne', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+  --radius: 14px;
+  --sidebar: 220px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; overflow-x: hidden; }
 
-header{position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border);padding:14px 24px;background:rgba(8,8,16,.95);backdrop-filter:blur(16px);display:flex;align-items:center;gap:12px;}
-.logo{width:34px;height:34px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
-.logo-text{font-size:16px;font-weight:700;letter-spacing:-.3px;}
-.logo-text span{color:var(--accent);}
-.hright{margin-left:auto;}
-.cpill{font-size:11px;font-family:var(--mono);padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .2s;}
-.cpill:hover{border-color:var(--accent);color:var(--accent);}
-.cpill.on{color:var(--accent3);border-color:rgba(62,232,160,.35);background:rgba(62,232,160,.07);}
+/* AMBIENT GLOW */
+.glow-bg {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 50% 35% at 20% 10%, rgba(139,92,246,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at 80% 80%, rgba(6,182,212,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 30% 25% at 60% 20%, rgba(236,72,153,0.06) 0%, transparent 60%);
+}
 
-main{max-width:580px;margin:0 auto;padding:36px 18px 80px;position:relative;z-index:1;}
-.hero{text-align:center;margin-bottom:32px;}
-.hero h1{font-size:clamp(22px,6vw,34px);font-weight:700;letter-spacing:-.8px;line-height:1.15;margin-bottom:8px;}
-.hero h1 em{font-style:normal;background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-.hero p{color:var(--muted);font-size:13px;}
+/* LAYOUT */
+.app { display: flex; min-height: 100vh; position: relative; z-index: 1; }
 
-/* MODAL */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.82);backdrop-filter:blur(8px);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;}
-.overlay.hidden{display:none;}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;width:100%;max-width:460px;padding:24px;}
-.mhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
-.mhead h2{font-size:17px;font-weight:700;}
-.mclose{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;}
-.mclose:hover{color:var(--text);}
-.steps{display:flex;margin-bottom:22px;}
-.sdot{flex:1;text-align:center;font-size:11px;font-weight:600;color:var(--muted);position:relative;}
-.sdot::before{content:attr(data-n);display:block;width:26px;height:26px;border-radius:50%;border:2px solid var(--border);background:var(--surface2);line-height:22px;margin:0 auto 5px;font-family:var(--mono);font-size:11px;transition:all .25s;}
-.sdot::after{content:'';position:absolute;top:12px;left:50%;right:-50%;height:2px;background:var(--border);z-index:-1;}
-.sdot:last-child::after{display:none;}
-.sdot.active::before{background:var(--accent);border-color:var(--accent);color:#fff;}
-.sdot.done::before{background:var(--accent3);border-color:var(--accent3);content:'✓';color:#111;}
-.sdot.active{color:var(--text);}
-.sp{display:none;}.sp.active{display:block;}
-.sp-title{font-size:15px;font-weight:600;margin-bottom:7px;}
-.sp-desc{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:14px;}
-.ibox{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:13px 15px;margin-bottom:14px;}
-.istep{display:flex;gap:9px;font-size:13px;color:var(--text);line-height:1.5;margin-bottom:7px;align-items:flex-start;}
-.istep:last-child{margin:0;}
-.inum{min-width:19px;height:19px;background:var(--accent);border-radius:50%;font-size:10px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;margin-top:2px;flex-shrink:0;}
-.mact{display:flex;gap:8px;margin-top:16px;justify-content:flex-end;}
+/* SIDEBAR */
+.sidebar {
+  width: var(--sidebar); flex-shrink: 0;
+  background: rgba(10,10,22,0.95);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  position: fixed; left: 0; top: 0; bottom: 0;
+  backdrop-filter: blur(20px);
+  z-index: 50;
+}
+.sidebar-logo {
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.logo-mark {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--violet), var(--cyan));
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; margin-bottom: 10px;
+}
+.logo-name {
+  font-family: var(--display);
+  font-size: 16px; font-weight: 800;
+  letter-spacing: -0.3px;
+  background: linear-gradient(90deg, var(--violet2), var(--cyan));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.logo-sub { font-size: 10px; color: var(--text3); margin-top: 1px; letter-spacing: 1px; text-transform: uppercase; }
 
-.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 18px;border:none;border-radius:10px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;}
-.btn-p{background:var(--accent);color:#fff;}
-.btn-p:hover{background:#9080ff;transform:translateY(-1px);}
-.btn-p:active{transform:none;}
-.btn-p:disabled{opacity:.45;cursor:not-allowed;transform:none;}
-.btn-s{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
-.btn-s:hover{border-color:var(--accent);color:var(--accent);}
-.btn-full{width:100%;justify-content:center;}
+.sidebar-nav { flex: 1; padding: 16px 12px; display: flex; flex-direction: column; gap: 2px; }
+.nav-section { font-size: 9px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 1.2px; padding: 12px 8px 6px; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: 10px;
+  cursor: pointer; transition: all 0.18s;
+  font-size: 13px; font-weight: 500; color: var(--text2);
+  border: 1px solid transparent;
+  position: relative;
+}
+.nav-item:hover { color: var(--text); background: rgba(139,92,246,0.08); }
+.nav-item.active {
+  color: var(--violet2);
+  background: rgba(139,92,246,0.12);
+  border-color: rgba(139,92,246,0.2);
+}
+.nav-item .ni-icon { font-size: 15px; width: 20px; text-align: center; flex-shrink: 0; }
+.nav-badge {
+  margin-left: auto; font-size: 9px; font-family: var(--mono);
+  background: var(--violet); color: #fff;
+  padding: 1px 6px; border-radius: 10px;
+}
 
-/* TABS */
-.tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:5px;margin-bottom:20px;}
-.tab-btn{flex:1;padding:9px 8px;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-size:12px;font-weight:500;border-radius:10px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:4px;}
-.tab-btn:hover{color:var(--text);background:var(--surface2);}
-.tab-btn.active{background:var(--accent);color:#fff;}
-.tab-panel{display:none;}.tab-panel.active{display:block;}
+.sidebar-footer {
+  padding: 16px 12px;
+  border-top: 1px solid var(--border);
+}
+.api-status {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; border-radius: 10px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border2);
+  cursor: pointer; transition: all 0.18s;
+}
+.api-status:hover { border-color: var(--border); }
+.api-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--text3); flex-shrink: 0;
+  transition: background 0.3s;
+}
+.api-dot.on { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.api-label { font-size: 11px; color: var(--text2); flex: 1; }
+.api-edit { font-size: 10px; color: var(--text3); }
 
-.card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:20px;margin-bottom:12px;}
-.card-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.9px;margin-bottom:14px;}
+/* MAIN */
+.main { margin-left: var(--sidebar); flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
 
-/* SETUP BANNER */
-.sbanner{background:linear-gradient(135deg,rgba(124,111,255,.09),rgba(255,107,157,.06));border:1px dashed rgba(124,111,255,.3);border-radius:14px;padding:14px 18px;display:flex;align-items:center;gap:12px;margin-bottom:20px;cursor:pointer;transition:all .2s;}
-.sbanner:hover{border-color:var(--accent);}
-.sbanner.hidden{display:none;}
-.sb-icon{font-size:24px;}
-.sb-text h3{font-size:13px;font-weight:600;margin-bottom:2px;}
-.sb-text p{font-size:11px;color:var(--muted);}
-.sb-arr{margin-left:auto;color:var(--accent);font-size:16px;}
+/* TOP BAR */
+.topbar {
+  padding: 16px 28px;
+  border-bottom: 1px solid var(--border2);
+  display: flex; align-items: center; gap: 14px;
+  background: rgba(6,6,14,0.7);
+  backdrop-filter: blur(12px);
+  position: sticky; top: 0; z-index: 40;
+}
+.page-title { font-family: var(--display); font-size: 18px; font-weight: 700; }
+.page-sub { font-size: 12px; color: var(--text3); margin-top: 1px; }
+.topbar-right { margin-left: auto; display: flex; gap: 8px; }
 
-/* CREATOR SELECT */
-.creator-select{display:flex;gap:8px;margin-bottom:14px;}
-.creator-opt{flex:1;padding:10px 12px;border:2px solid var(--border);border-radius:10px;background:var(--surface2);cursor:pointer;text-align:center;transition:all .2s;}
-.creator-opt:hover{border-color:var(--accent);}
-.creator-opt.active{border-color:var(--accent);background:rgba(124,111,255,.1);}
-.creator-opt .co-icon{font-size:20px;margin-bottom:4px;}
-.creator-opt .co-label{font-size:12px;font-weight:600;color:var(--text);}
-.creator-opt .co-sub{font-size:10px;color:var(--muted);margin-top:1px;}
-.select-wrap{position:relative;}
-.select-wrap::after{content:'▾';position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;}
-select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--mono);font-size:13px;padding:10px 12px;outline:none;cursor:pointer;transition:border-color .2s;appearance:none;}
-select:focus{border-color:var(--accent);}
+/* CONTENT */
+.content { padding: 28px; flex: 1; }
+.page { display: none; }
+.page.active { display: block; }
+
+/* CARDS */
+.card {
+  background: rgba(15,15,30,0.8);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.card:hover { border-color: rgba(139,92,246,0.2); }
+.card::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(139,92,246,0.03) 0%, transparent 60%);
+  pointer-events: none;
+}
+.card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+.card-icon {
+  width: 32px; height: 32px;
+  background: rgba(139,92,246,0.12);
+  border: 1px solid rgba(139,92,246,0.2);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+}
+.card-title { font-family: var(--display); font-size: 14px; font-weight: 700; }
+.card-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+/* STAT CARDS */
+.stat-card {
+  background: rgba(15,15,30,0.8);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  display: flex; align-items: center; gap: 14px;
+}
+.stat-icon { font-size: 22px; }
+.stat-val { font-family: var(--display); font-size: 22px; font-weight: 800; }
+.stat-lbl { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+/* WAVEFORM HERO */
+.wave-hero {
+  background: linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(6,182,212,0.05) 50%, rgba(236,72,153,0.06) 100%);
+  border: 1px solid rgba(139,92,246,0.2);
+  border-radius: 18px;
+  padding: 28px;
+  margin-bottom: 20px;
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; gap: 20px;
+}
+.wave-text h2 { font-family: var(--display); font-size: 22px; font-weight: 800; line-height: 1.2; }
+.wave-text h2 span { background: linear-gradient(90deg, var(--violet2), var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.wave-text p { font-size: 13px; color: var(--text2); margin-top: 6px; }
+.wave-bars { display: flex; align-items: flex-end; gap: 3px; height: 48px; margin-left: auto; flex-shrink: 0; }
+.wave-bar {
+  width: 4px; border-radius: 2px;
+  background: linear-gradient(to top, var(--violet), var(--cyan));
+  animation: wavePulse 1.2s ease-in-out infinite;
+  opacity: 0.7;
+}
+@keyframes wavePulse {
+  0%,100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
+
+/* FIELDS */
+.field { margin-bottom: 14px; }
+.field:last-child { margin-bottom: 0; }
+.label {
+  display: block; font-size: 11px; font-weight: 600;
+  color: var(--text3); text-transform: uppercase;
+  letter-spacing: 0.7px; margin-bottom: 6px;
+}
+.input {
+  width: 100%; background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border2);
+  border-radius: 10px; color: var(--text);
+  font-family: var(--mono); font-size: 13px;
+  padding: 10px 13px; outline: none;
+  transition: all 0.2s;
+}
+.input:focus { border-color: rgba(139,92,246,0.4); background: rgba(139,92,246,0.05); }
+.input::placeholder { color: var(--text3); }
+select.input { cursor: pointer; appearance: none; }
+
+.select-wrap { position: relative; }
+.select-wrap::after { content: '▾'; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--text3); pointer-events: none; font-size: 12px; }
+
+textarea.input { resize: vertical; min-height: 80px; font-family: var(--mono); line-height: 1.6; }
 
 /* FILE DROP */
-.file-drop{border:2px dashed var(--border);border-radius:12px;background:var(--surface2);padding:22px 16px;text-align:center;cursor:pointer;transition:all .2s;position:relative;display:block;}
-.file-drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
-.file-drop:hover{border-color:var(--accent);background:rgba(124,111,255,.05);}
-.fd-icon{font-size:26px;margin-bottom:7px;}
-.fd-text{font-size:13px;color:var(--muted);}
-.fd-name{font-size:11px;font-weight:600;color:var(--accent3);margin-top:5px;font-family:var(--mono);}
-.fmt-hint{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:3px;}
-
-.field{margin-bottom:12px;}
-.field label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;}
-input[type="text"]{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--mono);font-size:13px;padding:10px 12px;outline:none;transition:border-color .2s;}
-input[type="text"]:focus{border-color:var(--accent);}
+.file-drop {
+  border: 2px dashed rgba(139,92,246,0.25);
+  border-radius: 12px; background: rgba(139,92,246,0.03);
+  padding: 24px 16px; text-align: center;
+  cursor: pointer; transition: all 0.2s;
+  position: relative; display: block;
+}
+.file-drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.file-drop:hover { border-color: rgba(139,92,246,0.5); background: rgba(139,92,246,0.06); }
+.file-drop.dragover { border-color: var(--violet); background: rgba(139,92,246,0.1); }
+.fd-icon { font-size: 28px; margin-bottom: 8px; opacity: 0.8; }
+.fd-text { font-size: 13px; color: var(--text2); }
+.fd-name { font-size: 12px; color: var(--green); font-family: var(--mono); margin-top: 5px; font-weight: 500; }
+.fd-hint { font-size: 10px; color: var(--text3); font-family: var(--mono); margin-top: 3px; }
+.fd-count { font-size: 12px; color: var(--cyan); font-family: var(--mono); margin-top: 5px; font-weight: 600; }
 
 /* SLIDERS */
-.sg{margin-bottom:18px;}
-.srow{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;}
-.slabel{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
-.sval{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--accent);background:rgba(124,111,255,.1);border:1px solid rgba(124,111,255,.2);padding:3px 10px;border-radius:6px;min-width:64px;text-align:center;}
-.sval.neg{color:var(--accent2);background:rgba(255,107,157,.1);border-color:rgba(255,107,157,.2);}
-.dtag{font-size:10px;font-family:var(--mono);color:var(--accent3);background:rgba(62,232,160,.08);border:1px solid rgba(62,232,160,.2);padding:1px 7px;border-radius:4px;margin-left:5px;}
-input[type="range"]{width:100%;height:5px;border-radius:3px;appearance:none;outline:none;cursor:pointer;background:var(--border);}
-input[type="range"]::-webkit-slider-thumb{appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);border:2px solid #fff;cursor:pointer;box-shadow:0 0 8px rgba(124,111,255,.5);transition:transform .15s;}
-input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.2);}
-.range-ends{display:flex;justify-content:space-between;margin-top:4px;}
-.range-ends span{font-size:10px;color:var(--muted);font-family:var(--mono);}
+.slider-group { margin-bottom: 18px; }
+.slider-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.slider-label { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.7px; display: flex; align-items: center; gap: 7px; }
+.slider-badge {
+  font-size: 9px; font-family: var(--mono);
+  padding: 2px 7px; border-radius: 5px;
+  background: rgba(139,92,246,0.15);
+  border: 1px solid rgba(139,92,246,0.25);
+  color: var(--violet2); letter-spacing: 0;
+}
+.slider-val {
+  font-family: var(--mono); font-size: 13px; font-weight: 600;
+  padding: 4px 12px; border-radius: 7px; min-width: 70px; text-align: center;
+  background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.2); color: var(--violet2);
+}
+.slider-val.neutral { background: rgba(255,255,255,0.04); border-color: var(--border2); color: var(--text2); }
 
-/* BULK LIST */
-.bulk-list{margin-top:10px;max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;}
-.bulk-item{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px;font-size:12px;}
-.bulk-item .bi-name{flex:1;font-family:var(--mono);color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.bulk-item .bi-size{color:var(--muted);font-size:11px;flex-shrink:0;}
-.bulk-item .bi-status{width:16px;height:16px;border-radius:50%;background:var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;}
-.bulk-item.success .bi-status{background:rgba(62,232,160,.2);color:var(--accent3);}
-.bulk-item.error .bi-status{background:rgba(255,107,157,.2);color:var(--accent2);}
-.bulk-item.processing .bi-status{background:rgba(124,111,255,.2);}
-.bulk-item .bi-id{font-family:var(--mono);font-size:10px;color:var(--accent3);margin-left:4px;}
+input[type="range"] { width: 100%; height: 4px; border-radius: 2px; appearance: none; outline: none; cursor: pointer; background: var(--bg3); }
+input[type="range"]::-webkit-slider-thumb { appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--violet); border: 2px solid rgba(255,255,255,0.2); cursor: pointer; box-shadow: 0 0 10px rgba(139,92,246,0.6); transition: transform 0.15s; }
+input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.25); }
+.range-ends { display: flex; justify-content: space-between; margin-top: 4px; }
+.range-ends span { font-size: 10px; color: var(--text3); font-family: var(--mono); }
 
-/* PREVIEW */
-.preview-card{background:linear-gradient(135deg,rgba(62,232,160,.07),rgba(124,111,255,.05));border:1px solid rgba(124,111,255,.2);border-radius:14px;padding:16px;margin-bottom:12px;display:none;}
-.preview-card.show{display:block;}
-.preview-title{font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;}
-audio{width:100%;border-radius:8px;accent-color:var(--accent);}
-.preview-meta{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:6px;}
+/* TARGET TOGGLE */
+.target-toggle { display: flex; gap: 8px; margin-bottom: 14px; }
+.target-opt {
+  flex: 1; padding: 12px; border-radius: 10px;
+  border: 1px solid var(--border2);
+  background: rgba(255,255,255,0.02);
+  cursor: pointer; text-align: center; transition: all 0.2s;
+}
+.target-opt:hover { border-color: rgba(139,92,246,0.3); }
+.target-opt.active { border-color: rgba(139,92,246,0.4); background: rgba(139,92,246,0.08); }
+.target-opt .to-icon { font-size: 18px; margin-bottom: 4px; }
+.target-opt .to-label { font-size: 12px; font-weight: 600; color: var(--text); }
+.target-opt .to-sub { font-size: 10px; color: var(--text3); margin-top: 1px; }
+
+/* BUTTONS */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 11px 20px; border: none; border-radius: 10px;
+  font-family: var(--font); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s; letter-spacing: 0.1px;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--violet), #7C3AED);
+  color: #fff; width: 100%;
+  box-shadow: 0 4px 20px rgba(139,92,246,0.3);
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(139,92,246,0.4); }
+.btn-primary:active { transform: none; }
+.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-cyan { background: linear-gradient(135deg, var(--cyan), #0891B2); color: #fff; width: 100%; box-shadow: 0 4px 16px rgba(6,182,212,0.25); }
+.btn-cyan:hover { transform: translateY(-1px); }
+.btn-cyan:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+.btn-ghost { background: rgba(255,255,255,0.05); color: var(--text2); border: 1px solid var(--border2); }
+.btn-ghost:hover { border-color: rgba(139,92,246,0.3); color: var(--text); }
+.btn-sm { padding: 7px 14px; font-size: 12px; }
+
+.btn-row { display: flex; gap: 8px; }
+.btn-row .btn { flex: 1; }
 
 /* PROGRESS */
-.pw{height:4px;background:var(--surface2);border-radius:4px;margin-top:10px;overflow:hidden;display:none;}
-.pw.show{display:block;}
-.pb{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;transition:width .3s;width:0;}
+.prog-wrap { height: 3px; background: var(--bg3); border-radius: 2px; overflow: hidden; display: none; margin-top: 12px; }
+.prog-wrap.show { display: block; }
+.prog-bar { height: 100%; background: linear-gradient(90deg, var(--violet), var(--cyan)); border-radius: 2px; transition: width 0.3s; width: 0; }
+
+/* PREVIEW */
+.preview-panel {
+  background: linear-gradient(135deg, rgba(139,92,246,0.06), rgba(6,182,212,0.04));
+  border: 1px solid rgba(139,92,246,0.15);
+  border-radius: 12px; padding: 16px; margin-top: 14px; display: none;
+}
+.preview-panel.show { display: block; }
+.preview-label { font-size: 10px; font-weight: 600; color: var(--violet2); text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 10px; }
+audio { width: 100%; border-radius: 6px; accent-color: var(--violet); }
+.preview-meta { font-size: 10px; color: var(--text3); font-family: var(--mono); margin-top: 6px; }
 
 /* RESULT */
-.result{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-top:12px;display:none;}
-.result.show{display:block;}
-.result.ok{border-color:rgba(62,232,160,.3);}
-.result.err{border-color:rgba(255,107,157,.3);}
-.rlbl{font-size:10px;font-family:var(--mono);color:var(--muted);margin-bottom:5px;text-transform:uppercase;}
-.rval{font-family:var(--mono);font-size:15px;color:var(--accent3);word-break:break-all;}
-.result.err .rval{color:var(--accent2);font-size:12px;white-space:pre-wrap;}
+.result-panel {
+  background: rgba(15,15,30,0.9); border: 1px solid var(--border2);
+  border-radius: 12px; padding: 14px 16px; margin-top: 12px; display: none;
+}
+.result-panel.show { display: block; }
+.result-panel.ok { border-color: rgba(16,185,129,0.3); }
+.result-panel.err { border-color: rgba(239,68,68,0.3); }
+.result-lbl { font-size: 10px; font-family: var(--mono); color: var(--text3); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+.result-val { font-family: var(--mono); font-size: 15px; color: var(--green); word-break: break-all; }
+.result-panel.err .result-val { color: #F87171; font-size: 12px; white-space: pre-wrap; }
 
 /* PLAYBACK REC */
-.prec{background:linear-gradient(135deg,rgba(62,232,160,.07),rgba(124,111,255,.05));border:1px solid rgba(62,232,160,.25);border-radius:14px;padding:16px;margin-top:10px;display:none;}
-.prec-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;}
-.prec-icon{font-size:22px;}
-.prec-title{font-size:13px;font-weight:700;color:var(--accent3);}
-.prec-sub{font-size:11px;color:var(--muted);margin-top:1px;}
-.prec-speed{background:rgba(62,232,160,.08);border:1px solid rgba(62,232,160,.2);border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
-.prec-slabel{font-size:11px;color:var(--muted);}
-.prec-sval{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--accent3);}
-.prec-formula{font-size:11px;font-family:var(--mono);color:var(--muted);margin-bottom:12px;text-align:right;}
-.prec-code-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
-.prec-code{background:#0d0d18;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:var(--mono);font-size:12px;color:#c0c0e0;line-height:1.9;white-space:pre;overflow-x:auto;}
-.prec-code .kw{color:#7c6fff;}.prec-code .str{color:#f0a070;}.prec-code .num{color:#3ee8a0;}.prec-code .cm{color:#555570;}
+.pb-rec {
+  background: rgba(16,185,129,0.04);
+  border: 1px solid rgba(16,185,129,0.2);
+  border-radius: 12px; padding: 16px; margin-top: 12px; display: none;
+}
+.pb-rec-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.pb-rec-icon { font-size: 20px; }
+.pb-rec-title { font-family: var(--display); font-size: 13px; font-weight: 700; color: var(--green); }
+.pb-rec-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.pb-speed-box {
+  background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.15);
+  border-radius: 8px; padding: 10px 14px;
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;
+}
+.pb-speed-lbl { font-size: 11px; color: var(--text3); }
+.pb-speed-val { font-family: var(--mono); font-size: 20px; font-weight: 700; color: var(--green); }
+.pb-formula { font-size: 10px; font-family: var(--mono); color: var(--text3); text-align: right; margin-bottom: 12px; }
+.pb-code-lbl { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.pb-code {
+  background: #050510; border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px; padding: 12px 14px;
+  font-family: var(--mono); font-size: 11px; color: #B0AEDD;
+  line-height: 1.8; white-space: pre; overflow-x: auto;
+}
+.pb-code .kw { color: var(--violet2); }
+.pb-code .str { color: #FDA4AF; }
+.pb-code .num { color: var(--green); }
+.pb-code .cm { color: #4B4870; }
+
+/* COPY BUTTON */
+.copy-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 13px; background: rgba(139,92,246,0.1);
+  color: var(--violet2); border: 1px solid rgba(139,92,246,0.2);
+  border-radius: 7px; font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s; font-family: var(--font);
+  margin-top: 8px;
+}
+.copy-btn:hover { background: rgba(139,92,246,0.2); }
+.copy-btn.full { width: 100%; justify-content: center; }
+
+/* BULK LIST */
+.bulk-list { margin-top: 10px; max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; }
+.bulk-item {
+  background: rgba(255,255,255,0.02); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 8px 12px;
+  display: flex; align-items: center; gap: 8px; font-size: 12px;
+  transition: all 0.2s;
+}
+.bulk-item.processing { border-color: rgba(139,92,246,0.3); background: rgba(139,92,246,0.04); }
+.bulk-item.success { border-color: rgba(16,185,129,0.25); background: rgba(16,185,129,0.04); }
+.bulk-item.error { border-color: rgba(239,68,68,0.25); background: rgba(239,68,68,0.04); }
+.bi-icon { width: 14px; text-align: center; flex-shrink: 0; font-size: 11px; }
+.bi-name { flex: 1; font-family: var(--mono); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bi-size { color: var(--text3); font-size: 10px; flex-shrink: 0; font-family: var(--mono); }
+.bi-id { color: var(--green); font-family: var(--mono); font-size: 10px; }
+.bi-err { color: #F87171; font-size: 10px; }
 
 /* BULK SUMMARY */
-.bulk-summary{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-top:12px;display:none;}
-.bulk-summary.show{display:block;}
-.bs-stats{display:flex;gap:10px;margin-bottom:10px;}
-.bs-stat{flex:1;text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;}
-.bs-stat .bsn{font-size:18px;font-weight:700;font-family:var(--mono);}
-.bs-stat .bsl{font-size:10px;color:var(--muted);margin-top:1px;}
-.bs-stat.ok .bsn{color:var(--accent3);}
-.bs-stat.fail .bsn{color:var(--accent2);}
-.bs-stat.total .bsn{color:var(--accent);}
-.bs-list{max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;}
-.bs-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:11px;display:flex;align-items:center;gap:8px;}
-.bs-item.ok{border-color:rgba(62,232,160,.2);}
-.bs-item.fail{border-color:rgba(255,107,157,.2);}
-.bs-item .bsi-name{flex:1;font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.bs-item .bsi-id{color:var(--accent3);font-family:var(--mono);font-size:10px;}
-.bs-item .bsi-err{color:var(--accent2);font-size:10px;}
+.bulk-summary { background: rgba(15,15,30,0.8); border: 1px solid var(--border2); border-radius: 12px; padding: 16px; margin-top: 12px; display: none; }
+.bulk-summary.show { display: block; }
+.bs-stats { display: flex; gap: 8px; margin-bottom: 12px; }
+.bs-stat { flex: 1; text-align: center; background: rgba(255,255,255,0.02); border: 1px solid var(--border2); border-radius: 8px; padding: 10px; }
+.bs-stat .bsn { font-family: var(--display); font-size: 20px; font-weight: 800; }
+.bs-stat .bsl { font-size: 10px; color: var(--text3); margin-top: 1px; }
+.bs-stat.t .bsn { color: var(--violet2); }
+.bs-stat.ok .bsn { color: var(--green); }
+.bs-stat.fail .bsn { color: #F87171; }
+.bs-list { max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; }
+.bs-item { background: rgba(255,255,255,0.02); border: 1px solid var(--border2); border-radius: 7px; padding: 8px 10px; font-size: 11px; display: flex; align-items: center; gap: 7px; }
+.bs-item.ok { border-color: rgba(16,185,129,0.2); }
+.bs-item.fail { border-color: rgba(239,68,68,0.2); }
+.bs-item .bsi-name { flex: 1; font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bs-item .bsi-id { color: var(--green); font-family: var(--mono); font-size: 10px; }
+.bs-item .bsi-err { color: #F87171; font-size: 10px; }
 
-.copy-btn{display:inline-flex;align-items:center;gap:5px;margin-top:8px;padding:5px 12px;background:rgba(124,111,255,.1);color:var(--accent);border:1px solid rgba(124,111,255,.2);border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;font-family:var(--font);}
-.copy-btn:hover{background:rgba(124,111,255,.2);}
-.spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg);}}
-.tip{font-size:12px;color:var(--muted);line-height:1.5;}
-.tip code{color:var(--accent);font-family:var(--mono);}
-.btn-row{display:flex;gap:8px;}.btn-row .btn{flex:1;}
-@media(max-width:480px){main{padding:24px 14px 60px;}header{padding:12px 14px;}.creator-select{flex-direction:column;}}
+/* PERMISSION PAGE */
+.perm-method { display: flex; gap: 8px; margin-bottom: 16px; }
+.perm-opt {
+  flex: 1; padding: 14px 12px; border-radius: 10px;
+  border: 1px solid var(--border2);
+  background: rgba(255,255,255,0.02);
+  cursor: pointer; text-align: center; transition: all 0.2s;
+}
+.perm-opt:hover { border-color: rgba(6,182,212,0.3); }
+.perm-opt.active { border-color: rgba(6,182,212,0.4); background: rgba(6,182,212,0.06); }
+.perm-opt .po-icon { font-size: 22px; margin-bottom: 5px; }
+.perm-opt .po-label { font-size: 12px; font-weight: 600; color: var(--text); }
+.perm-opt .po-sub { font-size: 10px; color: var(--text3); margin-top: 2px; }
+.perm-opt.active .po-label { color: var(--cyan); }
+
+.perm-section { display: none; }
+.perm-section.active { display: block; }
+
+.tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 6px;
+  background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.2);
+  font-size: 11px; font-family: var(--mono); color: var(--cyan);
+}
+.tag-x { cursor: pointer; opacity: 0.6; }
+.tag-x:hover { opacity: 1; }
+
+.info-box {
+  background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.2);
+  border-radius: 10px; padding: 12px 14px; font-size: 12px; color: var(--text2);
+  display: flex; gap: 10px; align-items: flex-start; line-height: 1.5;
+}
+.info-box .ib-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+/* PERM RESULT LIST */
+.perm-result-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; border-radius: 8px;
+  background: rgba(255,255,255,0.02); border: 1px solid var(--border2);
+  font-size: 11px; margin-bottom: 4px; transition: all 0.2s;
+}
+.perm-result-item.ok { border-color: rgba(16,185,129,0.2); }
+.perm-result-item.fail { border-color: rgba(239,68,68,0.2); }
+.pri-id { font-family: var(--mono); color: var(--text2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pri-status { font-size: 10px; font-family: var(--mono); }
+.pri-status.ok { color: var(--green); }
+.pri-status.fail { color: #F87171; }
+
+/* MODAL */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.overlay.hidden { display: none; }
+.modal { background: var(--bg2); border: 1px solid rgba(139,92,246,0.25); border-radius: 18px; width: 100%; max-width: 460px; padding: 26px; position: relative; }
+.modal::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--violet), transparent); }
+.modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+.modal-head h2 { font-family: var(--display); font-size: 17px; font-weight: 800; }
+.modal-close { background: none; border: none; color: var(--text3); font-size: 18px; cursor: pointer; padding: 4px; border-radius: 6px; }
+.modal-close:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+
+.steps { display: flex; gap: 0; margin-bottom: 24px; }
+.sdot { flex: 1; text-align: center; font-size: 10px; font-weight: 600; color: var(--text3); position: relative; }
+.sdot::before { content: attr(data-n); display: block; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--border2); background: var(--bg3); line-height: 25px; margin: 0 auto 5px; font-family: var(--mono); font-size: 11px; transition: all 0.25s; }
+.sdot::after { content: ''; position: absolute; top: 12px; left: 50%; right: -50%; height: 1px; background: var(--border2); z-index: -1; }
+.sdot:last-child::after { display: none; }
+.sdot.active::before { background: var(--violet); border-color: var(--violet); color: #fff; box-shadow: 0 0 12px rgba(139,92,246,0.5); }
+.sdot.done::before { background: var(--green); border-color: var(--green); content: '✓'; color: #fff; }
+.sdot.active { color: var(--text); }
+.sp { display: none; } .sp.active { display: block; }
+.sp-title { font-family: var(--display); font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+.sp-desc { font-size: 12px; color: var(--text2); line-height: 1.6; margin-bottom: 14px; }
+.sp-desc a { color: var(--violet2); text-decoration: none; }
+.ibox { background: rgba(255,255,255,0.03); border: 1px solid var(--border2); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; }
+.istep { display: flex; gap: 9px; font-size: 12px; color: var(--text); line-height: 1.5; margin-bottom: 7px; align-items: flex-start; }
+.istep:last-child { margin: 0; }
+.inum { min-width: 18px; height: 18px; background: var(--violet); border-radius: 50%; font-size: 9px; font-weight: 700; color: #fff; display: flex; align-items: center; justify-content: center; margin-top: 2px; flex-shrink: 0; }
+.mact { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
+
+.spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid rgba(255,255,255,0.2); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.tip { font-size: 11px; color: var(--text3); line-height: 1.5; margin-top: 5px; }
+.tip a { color: var(--violet2); text-decoration: none; }
+.divider { border: none; border-top: 1px solid var(--border2); margin: 16px 0; }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.3); border-radius: 3px; }
+
+/* MOBILE */
+@media(max-width: 768px) {
+  :root { --sidebar: 0px; }
+  .sidebar { transform: translateX(-100%); transition: transform 0.3s; }
+  .sidebar.open { transform: translateX(0); width: 220px; }
+  .main { margin-left: 0; }
+  .topbar { padding: 14px 16px; }
+  .content { padding: 16px; }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .mobile-menu-btn { display: flex !important; }
+  .wave-bars { display: none; }
+}
+.mobile-menu-btn {
+  display: none; background: none; border: none;
+  color: var(--text2); font-size: 20px; cursor: pointer; padding: 4px;
+}
+.mobile-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 49; display: none; }
+.mobile-overlay.show { display: block; }
 </style>
 </head>
 <body>
 
-<div class="overlay" id="overlay">
+<div class="glow-bg"></div>
+<div class="mobile-overlay" id="mobileOverlay" onclick="closeSidebar()"></div>
+
+<!-- SETUP MODAL -->
+<div class="overlay" id="setupOverlay">
   <div class="modal">
-    <div class="mhead"><h2>⚙️ Setup Akun Roblox</h2><button class="mclose" onclick="closeModal()">✕</button></div>
+    <div class="modal-head">
+      <h2>⚡ Connect Roblox</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
     <div class="steps">
       <div class="sdot active" data-n="1" id="d1">Buka</div>
       <div class="sdot" data-n="2" id="d2">Buat Key</div>
-      <div class="sdot" data-n="3" id="d3">Simpan</div>
+      <div class="sdot" data-n="3" id="d3">Connect</div>
     </div>
     <div class="sp active" id="s1">
       <div class="sp-title">Buka Roblox Creator Hub</div>
-      <div class="sp-desc">Buat API Key gratis di Roblox. Hanya perlu sekali.</div>
+      <div class="sp-desc">Buat API Key gratis di Roblox untuk menghubungkan akunmu ke SoundForge.</div>
       <div class="ibox">
         <div class="istep"><div class="inum">1</div><div>Login ke akun Roblox di browser</div></div>
-        <div class="istep"><div class="inum">2</div><div>Klik tombol di bawah</div></div>
+        <div class="istep"><div class="inum">2</div><div>Klik tombol di bawah untuk buka halaman credentials</div></div>
       </div>
-      <a href="https://create.roblox.com/credentials" target="_blank" class="btn btn-p btn-full" style="text-decoration:none">🔗 Buka create.roblox.com/credentials</a>
-      <div class="mact"><button class="btn btn-p" onclick="goS(2)">Sudah dibuka →</button></div>
+      <a href="https://create.roblox.com/credentials" target="_blank" class="btn btn-primary" style="text-decoration:none;margin-bottom:4px">🔗 Buka create.roblox.com/credentials</a>
+      <div class="mact"><button class="btn btn-ghost" onclick="goS(2)">Sudah dibuka →</button></div>
     </div>
     <div class="sp" id="s2">
       <div class="sp-title">Buat API Key baru</div>
       <div class="ibox">
         <div class="istep"><div class="inum">1</div><div>Klik <strong>Create API Key</strong></div></div>
-        <div class="istep"><div class="inum">2</div><div>Nama bebas, contoh: <em>"Audio Uploader"</em></div></div>
-        <div class="istep"><div class="inum">3</div><div><strong>Access Permissions → Assets → Read &amp; Write</strong></div></div>
-        <div class="istep"><div class="inum">4</div><div>Klik <strong>Save &amp; Generate Key</strong></div></div>
-        <div class="istep"><div class="inum">5</div><div>Copy API Key <strong>(hanya tampil sekali!)</strong></div></div>
+        <div class="istep"><div class="inum">2</div><div>Beri nama bebas, contoh: <em>"SoundForge"</em></div></div>
+        <div class="istep"><div class="inum">3</div><div><strong>Access Permissions</strong> → <strong>Assets</strong> → tambah <strong>Read &amp; Write</strong></div></div>
+        <div class="istep"><div class="inum">4</div><div>Klik <strong>Save &amp; Generate Key</strong> → Copy hasilnya</div></div>
       </div>
       <div class="mact">
-        <button class="btn btn-s" onclick="goS(1)">← Kembali</button>
-        <button class="btn btn-p" onclick="goS(3)">Sudah punya key →</button>
+        <button class="btn btn-ghost" onclick="goS(1)">← Kembali</button>
+        <button class="btn btn-ghost" onclick="goS(3)">Punya key →</button>
       </div>
     </div>
     <div class="sp" id="s3">
-      <div class="sp-title">Masukkan API Key &amp; User ID</div>
-      <div class="sp-desc">Tersimpan di browser kamu saja, tidak dikirim ke server manapun selain Roblox.</div>
+      <div class="sp-title">Masukkan kredensial</div>
+      <div class="sp-desc">Data disimpan hanya di browser kamu — tidak dikirim ke server manapun selain Roblox.</div>
       <div class="field">
-        <label>API Key Roblox</label>
-        <input type="text" id="mApiKey" placeholder="Paste API Key dari Roblox...">
+        <label class="label">API Key Roblox</label>
+        <input type="text" class="input" id="mApiKey" placeholder="Paste API Key dari Roblox...">
       </div>
       <div class="field">
-        <label>User ID kamu</label>
-        <input type="text" id="mUserId" placeholder="Contoh: 123456789">
-        <p class="tip" style="margin-top:5px">Lihat di URL profil: roblox.com/users/<strong>ID</strong>/profile</p>
+        <label class="label">User ID</label>
+        <input type="text" class="input" id="mUserId" placeholder="Contoh: 123456789">
+        <p class="tip">Lihat di URL profil: roblox.com/users/<strong>ID</strong>/profile</p>
       </div>
       <div class="mact">
-        <button class="btn btn-s" onclick="goS(2)">← Kembali</button>
-        <button class="btn btn-p" onclick="saveClose()">✓ Simpan &amp; Mulai</button>
+        <button class="btn btn-ghost" onclick="goS(2)">← Kembali</button>
+        <button class="btn btn-primary" style="width:auto;padding:10px 20px" onclick="saveConn()">⚡ Connect</button>
       </div>
     </div>
   </div>
 </div>
 
-<header>
-  <div class="logo">🎵</div>
-  <span class="logo-text">Audio<span>Uploader</span></span>
-  <div class="hright">
-    <button class="cpill" id="connBtn" onclick="openModal()">⚙️ Setup</button>
-  </div>
-</header>
-
-<main>
-  <div class="hero">
-    <h1>Upload Musik ke<br><em>Roblox</em> Otomatis</h1>
-    <p>Bypass speed & amplify · Bulk upload · Personal & Komunitas</p>
-  </div>
-
-  <div class="sbanner" id="setupBanner" onclick="openModal()">
-    <div class="sb-icon">🔑</div>
-    <div class="sb-text"><h3>Hubungkan akun Roblox kamu</h3><p>Setup API Key sekali, langsung bisa upload</p></div>
-    <div class="sb-arr">→</div>
-  </div>
-
-  <!-- AUDIO SETTINGS -->
-  <div class="card">
-    <div class="card-label">⚙️ Audio Settings</div>
-    <div class="sg">
-      <div class="srow">
-        <span class="slabel">Speed <span class="dtag">default 2.3256x</span></span>
-        <span class="sval" id="speedVal">2.3256x</span>
-      </div>
-      <input type="range" id="speedSlider" min="0.5" max="5" step="0.0001" value="2.3256" oninput="updateSliders()">
-      <div class="range-ends"><span>0.5x</span><span>5.0x</span></div>
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">🎛️</div>
+      <div class="logo-name">SoundForge</div>
+      <div class="logo-sub">Roblox Audio Manager</div>
     </div>
-    <div class="sg" style="margin-bottom:0">
-      <div class="srow">
-        <span class="slabel">Amplify <span class="dtag">default 0dB</span></span>
-        <span class="sval neg" id="ampVal">-4.0 dB</span>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Upload</div>
+      <div class="nav-item active" onclick="showPage('bypass',this)">
+        <span class="ni-icon">⚡</span> Bypass Upload
       </div>
-      <input type="range" id="ampSlider" min="-20" max="20" step="0.5" value="0" oninput="updateSliders()">
-      <div class="range-ends"><span>-20dB</span><span>+20dB</span></div>
-    </div>
-  </div>
+      <div class="nav-item" onclick="showPage('bulk-bypass',this)">
+        <span class="ni-icon">📦</span> Bulk Bypass
+      </div>
+      <div class="nav-item" onclick="showPage('direct',this)">
+        <span class="ni-icon">⬆️</span> Direct Upload
+      </div>
 
-  <!-- UPLOAD TARGET -->
-  <div class="card">
-    <div class="card-label">👤 Upload Ke</div>
-    <div class="creator-select">
-      <div class="creator-opt active" id="optPersonal" onclick="selectCreator('personal')">
-        <div class="co-icon">👤</div>
-        <div class="co-label">Akun Pribadi</div>
-        <div class="co-sub">Upload ke akunmu</div>
+      <div class="nav-section">Manage</div>
+      <div class="nav-item" onclick="showPage('permission',this)">
+        <span class="ni-icon">🔐</span> Bulk Permission
+        <span class="nav-badge">NEW</span>
       </div>
-      <div class="creator-opt" id="optGroup" onclick="selectCreator('group')">
-        <div class="co-icon">👥</div>
-        <div class="co-label">Komunitas</div>
-        <div class="co-sub">Upload ke group</div>
-      </div>
-    </div>
-    <div id="groupPickerWrap" style="display:none">
-      <div class="field" style="margin-bottom:0">
-        <label>Pilih Komunitas</label>
-        <div class="select-wrap">
-          <select id="groupSelect"><option value="">Loading komunitas...</option></select>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="api-status" onclick="openModal()">
+        <div class="api-dot" id="apiDot"></div>
+        <div>
+          <div class="api-label" id="apiLabel">Belum terhubung</div>
+          <div class="api-edit">Klik untuk setup</div>
         </div>
-        <p class="tip" style="margin-top:6px">Hanya komunitas dimana kamu rank ≥ 200 atau owner.</p>
       </div>
     </div>
-  </div>
+  </aside>
 
-  <!-- TABS -->
-  <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('bypass',this)">🎵 Bypass Upload</button>
-    <button class="tab-btn" onclick="switchTab('bulk',this)">📦 Bulk Bypass</button>
-    <button class="tab-btn" onclick="switchTab('direct',this)">⬆️ Direct Upload</button>
-  </div>
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <button class="mobile-menu-btn" onclick="openSidebar()">☰</button>
+      <div>
+        <div class="page-title" id="pageTitle">Bypass Upload</div>
+        <div class="page-sub" id="pageSub">Upload audio dengan speed bypass otomatis</div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-ghost btn-sm" onclick="openModal()">⚙️ API</button>
+      </div>
+    </div>
 
-  <!-- TAB: BYPASS SINGLE -->
-  <div class="tab-panel active" id="tab-bypass">
-    <div class="card">
-      <div class="card-label">🎵 File Audio</div>
-      <label class="file-drop">
-        <input type="file" id="audioFile" accept=".mp3,.ogg,.wav,.flac,.aac" onchange="onFileChange()">
-        <div class="fd-icon">📂</div>
-        <div class="fd-text">Tap atau drag file audio ke sini</div>
-        <div class="fd-name" id="fdName"></div>
-        <div class="fmt-hint">.mp3 · .ogg · .wav · .flac · .aac</div>
-      </label>
-    </div>
-    <div class="card">
-      <div class="card-label">📝 Info Asset</div>
-      <div class="field">
-        <label>Nama Audio</label>
-        <input type="text" id="audioName" placeholder="Nama yang tampil di Roblox">
-      </div>
-      <div class="field" style="margin-bottom:0">
-        <label>Deskripsi (opsional)</label>
-        <input type="text" id="audioDesc" placeholder="Deskripsi audio">
-      </div>
-    </div>
-    <div class="preview-card" id="previewCard">
-      <div class="preview-title">🎧 Preview Hasil Proses</div>
-      <audio id="previewPlayer" controls></audio>
-      <div class="preview-meta" id="previewMeta"></div>
-    </div>
-    <div class="btn-row" style="margin-bottom:10px">
-      <button class="btn btn-s btn-full" id="btnPreview" onclick="doPreview()">🎧 Preview</button>
-      <button class="btn btn-p btn-full" id="btnUpload" onclick="doUpload()">⬆️ Upload</button>
-    </div>
-    <div class="pw" id="pw"><div class="pb" id="pb"></div></div>
-    <div class="result" id="result">
-      <div class="rlbl" id="rlbl">Asset ID</div>
-      <div class="rval" id="rval"></div>
-      <button class="copy-btn" id="copyBtn" onclick="copyId()" style="display:none">📋 Copy ID</button>
-    </div>
-    <div class="prec" id="prec">
-      <div class="prec-head">
-        <div class="prec-icon">🎯</div>
-        <div><div class="prec-title">Rekomendasi PlaybackSpeed</div><div class="prec-sub">Agar musik terdengar normal di game</div></div>
-      </div>
-      <div class="prec-speed">
-        <div class="prec-slabel">PlaybackSpeed yang harus dipakai</div>
-        <div class="prec-sval" id="precSval">0.4348</div>
-      </div>
-      <div class="prec-formula" id="precFormula">1 ÷ 2.3256x = 0.4300</div>
-      <div class="prec-code-label">📋 Entry Lua siap pakai</div>
-      <div class="prec-code" id="precCode"></div>
-      <button class="copy-btn btn-full" style="margin-top:8px;justify-content:center" onclick="copyScript()">📋 Copy Entry</button>
-    </div>
-    <button class="btn btn-s btn-full" style="margin-top:10px;font-size:12px;opacity:.6" onclick="resetSingle()">🔄 Reset</button>
-  </div>
+    <div class="content">
 
-  <!-- TAB: BULK BYPASS -->
-  <div class="tab-panel" id="tab-bulk">
-    <div class="card">
-      <div class="card-label">📦 File Audio (bisa banyak)</div>
-      <label class="file-drop">
-        <input type="file" id="bulkFiles" accept=".mp3,.ogg,.wav,.flac,.aac" multiple onchange="onBulkChange()">
-        <div class="fd-icon">📂</div>
-        <div class="fd-text">Tap atau drag beberapa file sekaligus</div>
-        <div class="fd-name" id="bulkCount"></div>
-        <div class="fmt-hint">.mp3 · .ogg · .wav · .flac · .aac · max 50 file</div>
-      </label>
-      <div class="bulk-list" id="bulkList"></div>
-    </div>
-    <div class="card">
-      <div class="field" style="margin-bottom:0">
-        <label>Prefix Nama (opsional)</label>
-        <input type="text" id="bulkPrefix" placeholder="Contoh: BGM — jadi 'BGM namafile'">
-      </div>
-    </div>
-    <button class="btn btn-p btn-full" id="btnBulk" onclick="doBulk(true)" style="margin-bottom:10px">⬆️ Bulk Upload + Bypass</button>
-    <div class="pw" id="bpw"><div class="pb" id="bpb"></div></div>
-    <div class="bulk-summary" id="bulkSummary">
-      <div class="bs-stats">
-        <div class="bs-stat total"><div class="bsn" id="bsTotal">0</div><div class="bsl">Total</div></div>
-        <div class="bs-stat ok"><div class="bsn" id="bsOk">0</div><div class="bsl">Berhasil</div></div>
-        <div class="bs-stat fail"><div class="bsn" id="bsFail">0</div><div class="bsl">Gagal</div></div>
-      </div>
-      <div class="bs-list" id="bsList"></div>
-      <button class="copy-btn btn-full" style="margin-top:8px;justify-content:center" onclick="copyBulkIds('bulk')">📋 Copy Semua Lua Entry</button>
-    </div>
-  </div>
+      <!-- PAGE: BYPASS SINGLE -->
+      <div class="page active" id="page-bypass">
+        <div class="wave-hero">
+          <div class="wave-text">
+            <h2>Bypass <span>Audio</span> Upload</h2>
+            <p>Ubah speed audio → upload ke Roblox → dapat PlaybackSpeed otomatis</p>
+          </div>
+          <div class="wave-bars" id="waveBars"></div>
+        </div>
 
-  <!-- TAB: DIRECT UPLOAD -->
-  <div class="tab-panel" id="tab-direct">
-    <div class="card" style="background:linear-gradient(135deg,rgba(62,232,160,.05),rgba(124,111,255,.04));border-color:rgba(62,232,160,.2)">
-      <div class="card-label" style="color:var(--accent3)">⬆️ Direct Upload — Tanpa Bypass</div>
-      <p class="tip">Upload langsung tanpa proses speed/amplify. PlaybackSpeed = 1.</p>
-    </div>
-    <div class="card">
-      <div class="card-label">🎵 File Audio (bisa banyak)</div>
-      <label class="file-drop">
-        <input type="file" id="directFiles" accept=".mp3,.ogg,.wav,.flac,.aac" multiple onchange="onDirectChange()">
-        <div class="fd-icon">📂</div>
-        <div class="fd-text">Tap atau drag file audio (bisa banyak)</div>
-        <div class="fd-name" id="directCount"></div>
-        <div class="fmt-hint">.mp3 · .ogg · .wav · .flac · .aac</div>
-      </label>
-      <div class="bulk-list" id="directList"></div>
-    </div>
-    <div class="card">
-      <div class="field" style="margin-bottom:0">
-        <label>Prefix Nama (opsional)</label>
-        <input type="text" id="directPrefix" placeholder="Contoh: OST — jadi 'OST namafile'">
+        <div class="grid-2" style="margin-bottom:14px">
+          <!-- LEFT -->
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-icon">🎵</div>
+                <div><div class="card-title">File Audio</div><div class="card-sub">Pilih 1 file untuk di-bypass</div></div>
+              </div>
+              <label class="file-drop">
+                <input type="file" id="bypassFile" accept=".mp3,.ogg,.wav,.flac,.aac" onchange="onBypassFile()">
+                <div class="fd-icon">📂</div>
+                <div class="fd-text">Tap atau drag file audio</div>
+                <div class="fd-name" id="bypassFileName"></div>
+                <div class="fd-hint">.mp3 · .ogg · .wav · .flac · .aac</div>
+              </label>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div class="card-icon">📝</div>
+                <div><div class="card-title">Info Asset</div></div>
+              </div>
+              <div class="field">
+                <label class="label">Nama Audio</label>
+                <input type="text" class="input" id="bypassName" placeholder="Nama yang tampil di Roblox">
+              </div>
+              <div class="field">
+                <label class="label">Deskripsi (opsional)</label>
+                <input type="text" class="input" id="bypassDesc" placeholder="Deskripsi">
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT -->
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-icon">⚙️</div>
+                <div><div class="card-title">Audio Settings</div></div>
+              </div>
+              <div class="slider-group">
+                <div class="slider-row">
+                  <span class="slider-label">Speed <span class="slider-badge">default 2.3256x</span></span>
+                  <span class="slider-val" id="speedVal">2.3256x</span>
+                </div>
+                <input type="range" id="speedSlider" min="0.5" max="5" step="0.0001" value="2.3256" oninput="updateSliders()">
+                <div class="range-ends"><span>0.5x</span><span>5.0x</span></div>
+              </div>
+              <div class="slider-group" style="margin-bottom:0">
+                <div class="slider-row">
+                  <span class="slider-label">Amplify <span class="slider-badge">default 0dB</span></span>
+                  <span class="slider-val neutral" id="ampVal">0.0 dB</span>
+                </div>
+                <input type="range" id="ampSlider" min="-20" max="20" step="0.5" value="0" oninput="updateSliders()">
+                <div class="range-ends"><span>-20dB</span><span>+20dB</span></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div class="card-icon">👤</div>
+                <div><div class="card-title">Upload Ke</div></div>
+              </div>
+              <div class="target-toggle">
+                <div class="target-opt active" id="bypassTargetPersonal" onclick="setTarget('bypass','personal')">
+                  <div class="to-icon">👤</div>
+                  <div class="to-label">Pribadi</div>
+                  <div class="to-sub">Akun kamu</div>
+                </div>
+                <div class="target-opt" id="bypassTargetGroup" onclick="setTarget('bypass','group')">
+                  <div class="to-icon">👥</div>
+                  <div class="to-label">Komunitas</div>
+                  <div class="to-sub">Group kamu</div>
+                </div>
+              </div>
+              <div id="bypassGroupWrap" style="display:none">
+                <div class="select-wrap">
+                  <select class="input" id="bypassGroup"><option value="">Loading...</option></select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="preview-panel" id="bypassPreview">
+          <div class="preview-label">🎧 Preview Bypass (kecepatan asli file)</div>
+          <audio id="bypassAudio" controls></audio>
+          <div class="preview-meta" id="bypassPreviewMeta"></div>
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border2)">
+            <div class="preview-label" style="color:var(--green)">🎯 Preview dengan PlaybackSpeed (seperti di Roblox)</div>
+            <audio id="bypassAudioPb" controls></audio>
+            <div class="preview-meta" id="bypassPreviewPbMeta">PlaybackSpeed akan diterapkan setelah upload selesai</div>
+          </div>
+        </div>
+
+        <div class="btn-row" style="margin-bottom:10px">
+          <button class="btn btn-ghost" id="btnBypassPreview" onclick="doBypassPreview()">🎧 Preview</button>
+          <button class="btn btn-primary" id="btnBypassUpload" onclick="doBypassUpload()">⚡ Upload ke Roblox</button>
+        </div>
+        <div class="prog-wrap" id="bypassProg"><div class="prog-bar" id="bypassProgBar"></div></div>
+
+        <div class="result-panel" id="bypassResult">
+          <div class="result-lbl" id="bypassResultLbl">Asset ID</div>
+          <div class="result-val" id="bypassResultVal"></div>
+          <button class="copy-btn" id="bypassCopyId" onclick="copyText(window._bid,'btnCopyId')" style="display:none">📋 Copy ID</button>
+        </div>
+
+        <div class="pb-rec" id="bypassPbRec">
+          <div class="pb-rec-head">
+            <div class="pb-rec-icon">🎯</div>
+            <div><div class="pb-rec-title">Rekomendasi PlaybackSpeed</div><div class="pb-rec-sub">Agar musik terdengar normal di Roblox</div></div>
+          </div>
+          <div class="pb-speed-box">
+            <div class="pb-speed-lbl">PlaybackSpeed yang harus dipakai</div>
+            <div class="pb-speed-val" id="bypassPbVal">0.4300</div>
+          </div>
+          <div class="pb-formula" id="bypassPbFormula">1 ÷ 2.3256x = 0.4300</div>
+          <div class="pb-code-lbl">📋 Lua Entry siap pakai</div>
+          <div class="pb-code" id="bypassPbCode"></div>
+          <button class="copy-btn full" onclick="copyScript()">📋 Copy Lua Entry</button>
+        </div>
+
+        <button class="btn btn-ghost" style="width:100%;margin-top:10px;font-size:12px;opacity:.5" onclick="resetBypass()">🔄 Reset</button>
       </div>
-    </div>
-    <button class="btn btn-full" id="btnDirect" onclick="doBulk(false)" style="margin-bottom:10px;background:var(--accent3);color:#111;font-weight:700">⬆️ Upload Langsung</button>
-    <div class="pw" id="dpw"><div class="pb" id="dpb" style="background:var(--accent3)"></div></div>
-    <div class="bulk-summary" id="directSummary">
-      <div class="bs-stats">
-        <div class="bs-stat total"><div class="bsn" id="dsTotal">0</div><div class="bsl">Total</div></div>
-        <div class="bs-stat ok"><div class="bsn" id="dsOk">0</div><div class="bsl">Berhasil</div></div>
-        <div class="bs-stat fail"><div class="bsn" id="dsFail">0</div><div class="bsl">Gagal</div></div>
+
+      <!-- PAGE: BULK BYPASS -->
+      <div class="page" id="page-bulk-bypass">
+        <div class="grid-2" style="margin-bottom:14px">
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-icon">📦</div>
+                <div><div class="card-title">File Audio</div><div class="card-sub">Pilih banyak file sekaligus</div></div>
+              </div>
+              <label class="file-drop">
+                <input type="file" id="bulkBypassFiles" accept=".mp3,.ogg,.wav,.flac,.aac" multiple onchange="onBulkBypassFiles()">
+                <div class="fd-icon">📂</div>
+                <div class="fd-text">Tap atau drag beberapa file</div>
+                <div class="fd-count" id="bulkBypassCount"></div>
+                <div class="fd-hint">.mp3 · .ogg · .wav · .flac · .aac · max 50 file</div>
+              </label>
+              <div class="bulk-list" id="bulkBypassList"></div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div class="card-icon">📝</div>
+                <div><div class="card-title">Prefix Nama</div><div class="card-sub">Opsional — ditambah di depan nama file</div></div>
+              </div>
+              <div class="field" style="margin-bottom:0">
+                <label class="label">Prefix</label>
+                <input type="text" class="input" id="bulkBypassPrefix" placeholder="Contoh: BGM — hasil: 'BGM namafile'">
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-icon">⚙️</div>
+                <div><div class="card-title">Audio Settings</div><div class="card-sub">Berlaku untuk semua file</div></div>
+              </div>
+              <div class="slider-group">
+                <div class="slider-row">
+                  <span class="slider-label">Speed <span class="slider-badge">2.3256x</span></span>
+                  <span class="slider-val" id="bulkSpeedVal">2.3256x</span>
+                </div>
+                <input type="range" id="bulkSpeedSlider" min="0.5" max="5" step="0.0001" value="2.3256" oninput="updateBulkSliders()">
+                <div class="range-ends"><span>0.5x</span><span>5.0x</span></div>
+              </div>
+              <div class="slider-group" style="margin-bottom:0">
+                <div class="slider-row">
+                  <span class="slider-label">Amplify <span class="slider-badge">0dB</span></span>
+                  <span class="slider-val neutral" id="bulkAmpVal">0.0 dB</span>
+                </div>
+                <input type="range" id="bulkAmpSlider" min="-20" max="20" step="0.5" value="0" oninput="updateBulkSliders()">
+                <div class="range-ends"><span>-20dB</span><span>+20dB</span></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div class="card-icon">👤</div>
+                <div><div class="card-title">Upload Ke</div></div>
+              </div>
+              <div class="target-toggle">
+                <div class="target-opt active" id="bulkTargetPersonal" onclick="setTarget('bulk','personal')">
+                  <div class="to-icon">👤</div><div class="to-label">Pribadi</div>
+                </div>
+                <div class="target-opt" id="bulkTargetGroup" onclick="setTarget('bulk','group')">
+                  <div class="to-icon">👥</div><div class="to-label">Komunitas</div>
+                </div>
+              </div>
+              <div id="bulkGroupWrap" style="display:none">
+                <div class="select-wrap">
+                  <select class="input" id="bulkGroup"><option value="">Loading...</option></select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" id="btnBulkBypass" onclick="doBulkUpload(true)" style="margin-bottom:10px">⚡ Bulk Bypass Upload</button>
+        <div class="prog-wrap" id="bulkBypassProg"><div class="prog-bar" id="bulkBypassProgBar"></div></div>
+
+        <div class="bulk-summary" id="bulkBypassSummary">
+          <div class="bs-stats">
+            <div class="bs-stat t"><div class="bsn" id="bbTotal">0</div><div class="bsl">Total</div></div>
+            <div class="bs-stat ok"><div class="bsn" id="bbOk">0</div><div class="bsl">Berhasil</div></div>
+            <div class="bs-stat fail"><div class="bsn" id="bbFail">0</div><div class="bsl">Gagal</div></div>
+          </div>
+          <div class="bs-list" id="bulkBypassResults"></div>
+          <button class="copy-btn full" style="margin-top:8px" onclick="copyBulkEntries('bulkBypassResultsData', true)">📋 Copy Semua Lua Entry</button>
+        </div>
       </div>
-      <div class="bs-list" id="dsList"></div>
-      <button class="copy-btn btn-full" style="margin-top:8px;justify-content:center" onclick="copyBulkIds('direct')">📋 Copy Semua Lua Entry</button>
+
+      <!-- PAGE: DIRECT UPLOAD -->
+      <div class="page" id="page-direct">
+        <div class="grid-2" style="margin-bottom:14px">
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-icon">⬆️</div>
+                <div><div class="card-title">File Audio</div><div class="card-sub">Upload tanpa proses apapun</div></div>
+              </div>
+              <label class="file-drop">
+                <input type="file" id="directFiles" accept=".mp3,.ogg,.wav,.flac,.aac" multiple onchange="onDirectFiles()">
+                <div class="fd-icon">📂</div>
+                <div class="fd-text">Tap atau drag file audio</div>
+                <div class="fd-count" id="directCount"></div>
+                <div class="fd-hint">.mp3 · .ogg · .wav · .flac · .aac · max 50 file</div>
+              </label>
+              <div class="bulk-list" id="directList"></div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <div class="card-icon">📝</div>
+                <div><div class="card-title">Prefix Nama</div><div class="card-sub">Opsional</div></div>
+              </div>
+              <div class="field" style="margin-bottom:0">
+                <label class="label">Prefix</label>
+                <input type="text" class="input" id="directPrefix" placeholder="Contoh: OST — hasil: 'OST namafile'">
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-icon">👤</div>
+                <div><div class="card-title">Upload Ke</div></div>
+              </div>
+              <div class="target-toggle">
+                <div class="target-opt active" id="directTargetPersonal" onclick="setTarget('direct','personal')">
+                  <div class="to-icon">👤</div><div class="to-label">Pribadi</div>
+                </div>
+                <div class="target-opt" id="directTargetGroup" onclick="setTarget('direct','group')">
+                  <div class="to-icon">👥</div><div class="to-label">Komunitas</div>
+                </div>
+              </div>
+              <div id="directGroupWrap" style="display:none">
+                <div class="select-wrap">
+                  <select class="input" id="directGroup"><option value="">Loading...</option></select>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <div class="card-icon">ℹ️</div>
+                <div><div class="card-title">Info</div></div>
+              </div>
+              <div class="info-box">
+                <div class="ib-icon">⚡</div>
+                <div>Direct upload tidak mengubah audio sama sekali. Cocok untuk audio yang sudah siap atau sudah di-bypass manual.</div>
+              </div>
+              <div style="margin-top:10px" class="info-box" style="margin-top:10px">
+                <div class="ib-icon">🎵</div>
+                <div>PlaybackSpeed = <strong>1.0000</strong> untuk semua direct upload (tidak ada bypass).</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-cyan" id="btnDirect" onclick="doBulkUpload(false)" style="margin-bottom:10px">⬆️ Upload Langsung</button>
+        <div class="prog-wrap" id="directProg"><div class="prog-bar" id="directProgBar"></div></div>
+
+        <div class="bulk-summary" id="directSummary">
+          <div class="bs-stats">
+            <div class="bs-stat t"><div class="bsn" id="dTotal">0</div><div class="bsl">Total</div></div>
+            <div class="bs-stat ok"><div class="bsn" id="dOk">0</div><div class="bsl">Berhasil</div></div>
+            <div class="bs-stat fail"><div class="bsn" id="dFail">0</div><div class="bsl">Gagal</div></div>
+          </div>
+          <div class="bs-list" id="directResults"></div>
+          <button class="copy-btn full" style="margin-top:8px" onclick="copyBulkEntries('directResultsData', false)">📋 Copy Semua Lua Entry</button>
+        </div>
+      </div>
+
+      <!-- PAGE: BULK PERMISSION -->
+      <div class="page" id="page-permission">
+        <div class="wave-hero" style="background:linear-gradient(135deg,rgba(6,182,212,0.08) 0%,rgba(16,185,129,0.05) 100%);border-color:rgba(6,182,212,0.2)">
+          <div class="wave-text">
+            <h2>Bulk <span style="background:linear-gradient(90deg,var(--cyan),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent">Permission</span></h2>
+            <p>Set izin akses audio secara massal — Public, Komunitas, atau User/Game tertentu</p>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-header">
+            <div class="card-icon" style="background:rgba(6,182,212,0.1);border-color:rgba(6,182,212,0.2)">🔐</div>
+            <div><div class="card-title">Tipe Permission</div><div class="card-sub">Pilih jenis akses yang ingin diset</div></div>
+          </div>
+          <div class="perm-method">
+            <div class="perm-opt active" id="permPublic" onclick="setPermMethod('public')">
+              <div class="po-icon">🌐</div>
+              <div class="po-label">Public</div>
+              <div class="po-sub">Bisa dipakai siapa saja</div>
+            </div>
+            <div class="perm-opt" id="permGroup" onclick="setPermMethod('group')">
+              <div class="po-icon">👥</div>
+              <div class="po-label">Komunitas</div>
+              <div class="po-sub">Grant ke group</div>
+            </div>
+            <div class="perm-opt" id="permUser" onclick="setPermMethod('user')">
+              <div class="po-icon">🎮</div>
+              <div class="po-label">User/Game</div>
+              <div class="po-sub">Grant ke ID tertentu</div>
+            </div>
+          </div>
+
+          <!-- Public -->
+          <div class="perm-section active" id="permSectionPublic">
+            <div class="info-box">
+              <div class="ib-icon">⚠️</div>
+              <div>Mengeset audio ke <strong>Public</strong> berarti siapa saja di Roblox bisa menggunakan audio tersebut di game mereka. Ini tidak bisa dibatalkan via API.</div>
+            </div>
+          </div>
+
+          <!-- Group -->
+          <div class="perm-section" id="permSectionGroup">
+            <div class="field" style="margin-bottom:0">
+              <label class="label">Pilih Komunitas</label>
+              <div class="select-wrap">
+                <select class="input" id="permGroupSelect"><option value="">Loading komunitas...</option></select>
+              </div>
+            </div>
+          </div>
+
+          <!-- User/Game -->
+          <div class="perm-section" id="permSectionUser">
+            <div class="field">
+              <label class="label">User ID atau Universe ID</label>
+              <div style="display:flex;gap:8px">
+                <input type="text" class="input" id="permTargetInput" placeholder="Masukkan ID lalu Enter atau klik +">
+                <button class="btn btn-ghost btn-sm" onclick="addPermTarget()" style="flex-shrink:0">+</button>
+              </div>
+              <div class="tag-list" id="permTargetList"></div>
+            </div>
+            <div class="field" style="margin-bottom:0">
+              <label class="label">Tipe Target</label>
+              <div class="select-wrap">
+                <select class="input" id="permTargetType">
+                  <option value="user">User ID</option>
+                  <option value="experience">Universe ID (Experience)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-header">
+            <div class="card-icon" style="background:rgba(6,182,212,0.1);border-color:rgba(6,182,212,0.2)">📋</div>
+            <div><div class="card-title">Daftar Asset ID</div><div class="card-sub">1 Asset ID per baris</div></div>
+          </div>
+          <div class="field" style="margin-bottom:8px">
+            <textarea class="input" id="permAssetIds" placeholder="Masukkan Asset ID audio, 1 per baris:&#10;138208885584922&#10;74984701492756&#10;..." rows="6"></textarea>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span class="tip" id="permCount">0 asset ID</span>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-ghost btn-sm" onclick="clearPermIds()">🗑️ Clear</button>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-cyan" id="btnPerm" onclick="doPermission()" style="margin-bottom:10px">🔐 Set Permission Bulk</button>
+        <div class="prog-wrap" id="permProg"><div class="prog-bar" id="permProgBar" style="background:linear-gradient(90deg,var(--cyan),var(--green))"></div></div>
+
+        <div class="bulk-summary" id="permSummary">
+          <div class="bs-stats">
+            <div class="bs-stat t"><div class="bsn" id="pTotal">0</div><div class="bsl">Total</div></div>
+            <div class="bs-stat ok"><div class="bsn" id="pOk">0</div><div class="bsl">Berhasil</div></div>
+            <div class="bs-stat fail"><div class="bsn" id="pFail">0</div><div class="bsl">Gagal</div></div>
+          </div>
+          <div class="bs-list" id="permResults"></div>
+        </div>
+      </div>
+
     </div>
   </div>
-</main>
+</div>
 
 <script>
-let apiKey=localStorage.getItem('rblx_key')||'';
-let userId=localStorage.getItem('rblx_uid')||'';
-let currentFile=null;
-let creatorType='personal';
-let previewUrl=null;
-let bulkResults=[];
-let directResults=[];
+// ===== STATE =====
+let apiKey = localStorage.getItem('sf_key') || '';
+let userId = localStorage.getItem('sf_uid') || '';
+let groups = [];
+let bypassFile = null;
+let previewUrl = null;
+let targets = { bypass: 'personal', bulk: 'personal', direct: 'personal' };
+let permMethod = 'public';
+let permTargets = [];
+let bulkBypassResultsData = [];
+let directResultsData = [];
 
-window.onload=()=>{
-  if(apiKey&&userId){setConnected();loadGroups();}
-  else setTimeout(openModal,500);
-  updateSliders();
+// ===== INIT =====
+window.onload = () => {
+  buildWaveBars();
+  updateSliders(); updateBulkSliders();
+  if (apiKey && userId) { setConnected(); loadGroups(); }
+  else setTimeout(openModal, 600);
+  // permission textarea counter
+  document.getElementById('permAssetIds').addEventListener('input', updatePermCount);
 };
 
-function openModal(){document.getElementById('overlay').classList.remove('hidden');if(apiKey)document.getElementById('mApiKey').value=apiKey;if(userId)document.getElementById('mUserId').value=userId;goS(apiKey?3:1);}
-function closeModal(){document.getElementById('overlay').classList.add('hidden');}
-function goS(n){for(let i=1;i<=3;i++){const d=document.getElementById('d'+i);document.getElementById('s'+i).classList.toggle('active',i===n);d.classList.remove('active','done');if(i<n)d.classList.add('done');else if(i===n)d.classList.add('active');}}
-function saveClose(){
+function buildWaveBars() {
+  const el = document.getElementById('waveBars');
+  if (!el) return;
+  const heights = [20,35,55,40,70,45,80,50,65,35,48,72,30,58,42];
+  heights.forEach((h, i) => {
+    const bar = document.createElement('div');
+    bar.className = 'wave-bar';
+    bar.style.height = h + 'px';
+    bar.style.animationDelay = (i * 0.08) + 's';
+    el.appendChild(bar);
+  });
+}
+
+// ===== MODAL =====
+function openModal() { document.getElementById('setupOverlay').classList.remove('hidden'); if(apiKey)document.getElementById('mApiKey').value=apiKey; if(userId)document.getElementById('mUserId').value=userId; goS(apiKey?3:1); }
+function closeModal() { document.getElementById('setupOverlay').classList.add('hidden'); }
+function goS(n) {
+  for(let i=1;i<=3;i++){
+    const d=document.getElementById('d'+i);
+    document.getElementById('s'+i).classList.toggle('active',i===n);
+    d.classList.remove('active','done');
+    if(i<n)d.classList.add('done'); else if(i===n)d.classList.add('active');
+  }
+}
+function saveConn() {
   const k=document.getElementById('mApiKey').value.trim();
   const u=document.getElementById('mUserId').value.trim();
   if(!k){alert('Masukkan API Key dulu!');return;}
   if(!u){alert('Masukkan User ID dulu!');return;}
   apiKey=k;userId=u;
-  localStorage.setItem('rblx_key',k);localStorage.setItem('rblx_uid',u);
+  localStorage.setItem('sf_key',k);localStorage.setItem('sf_uid',u);
   closeModal();setConnected();loadGroups();
 }
-function setConnected(){
-  const btn=document.getElementById('connBtn');
-  btn.textContent='✓ Terhubung';btn.className='cpill on';
-  document.getElementById('setupBanner').classList.add('hidden');
+function setConnected() {
+  document.getElementById('apiDot').className='api-dot on';
+  document.getElementById('apiLabel').textContent='Terhubung · ID '+userId;
 }
 
-function switchTab(name,btn){
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById('tab-'+name).classList.add('active');
-  btn.classList.add('active');
+// ===== NAVIGATION =====
+const pageTitles = {
+  'bypass': ['Bypass Upload','Upload audio dengan speed bypass otomatis'],
+  'bulk-bypass': ['Bulk Bypass','Upload banyak file sekaligus dengan bypass'],
+  'direct': ['Direct Upload','Upload audio tanpa proses apapun'],
+  'permission': ['Bulk Permission','Set izin akses audio secara massal'],
+};
+function showPage(name, el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  if(el) el.classList.add('active');
+  const t = pageTitles[name];
+  if(t){ document.getElementById('pageTitle').textContent=t[0]; document.getElementById('pageSub').textContent=t[1]; }
 }
 
-function selectCreator(type){
-  creatorType=type;
-  document.getElementById('optPersonal').classList.toggle('active',type==='personal');
-  document.getElementById('optGroup').classList.toggle('active',type==='group');
-  document.getElementById('groupPickerWrap').style.display=type==='group'?'block':'none';
+// ===== MOBILE SIDEBAR =====
+function openSidebar() { document.getElementById('sidebar').classList.add('open'); document.getElementById('mobileOverlay').classList.add('show'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('mobileOverlay').classList.remove('show'); }
+
+// ===== GROUPS =====
+async function loadGroups() {
+  if (!userId) return;
+  try {
+    const res = await fetch(`/api/groups?userId=${userId}`);
+    const data = await res.json();
+    groups = data.groups || [];
+    const opts = groups.length ? groups.map(g=>`<option value="${g.id}">${g.name} (${g.role||'Member'})</option>`).join('') : '<option value="">Tidak ada komunitas</option>';
+    ['bypassGroup','bulkGroup','directGroup','permGroupSelect'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.innerHTML = opts;
+    });
+  } catch(e) { console.error('Load groups failed:', e); }
 }
 
-async function loadGroups(){
-  if(!userId)return;
-  try{
-    const res=await fetch(`/api/groups?userId=${userId}`);
-    const data=await res.json();
-    const sel=document.getElementById('groupSelect');
-    sel.innerHTML=data.groups?.length
-      ?data.groups.map(g=>`<option value="${g.id}">${g.name} (${g.role||'Member'})</option>`).join('')
-      :'<option value="">Tidak ada komunitas ditemukan</option>';
-  }catch(e){document.getElementById('groupSelect').innerHTML='<option value="">Gagal load komunitas</option>';}
+// ===== TARGET TOGGLE =====
+function setTarget(scope, type) {
+  targets[scope] = type;
+  const prefix = scope === 'bulk' ? 'bulk' : scope;
+  document.getElementById(prefix+'TargetPersonal').classList.toggle('active', type==='personal');
+  document.getElementById(prefix+'TargetGroup').classList.toggle('active', type==='group');
+  document.getElementById(prefix+'GroupWrap').style.display = type==='group' ? 'block' : 'none';
 }
 
-function updateSliders(){
-  const sp=parseFloat(document.getElementById('speedSlider').value);
-  const amp=parseFloat(document.getElementById('ampSlider').value);
-  document.getElementById('speedVal').textContent=sp.toFixed(2)+'x';
-  const ae=document.getElementById('ampVal');
-  ae.textContent=(amp>=0?'+':'')+amp.toFixed(1)+' dB';
-  ae.className='sval'+(amp<0?' neg':'');
-  const spP=((sp-.5)/(4.5))*100;
-  document.getElementById('speedSlider').style.background=`linear-gradient(to right,var(--accent) ${spP}%,var(--border) ${spP}%)`;
-  const apP=((amp+20)/40)*100;
-  document.getElementById('ampSlider').style.background=`linear-gradient(to right,var(--accent2) ${apP}%,var(--border) ${apP}%)`;
+// ===== SLIDERS =====
+function updateSliders() {
+  const sp = parseFloat(document.getElementById('speedSlider').value);
+  const amp = parseFloat(document.getElementById('ampSlider').value);
+  document.getElementById('speedVal').textContent = sp.toFixed(4)+'x';
+  const ae = document.getElementById('ampVal');
+  ae.textContent = (amp>=0?'+':'')+amp.toFixed(1)+' dB';
+  ae.className = 'slider-val' + (Math.abs(amp)<0.01?' neutral':'');
+  paintSlider('speedSlider', sp, 0.5, 5, 'var(--violet)');
+  paintSlider('ampSlider', amp, -20, 20, amp>=0?'var(--cyan)':'var(--pink)');
+}
+function updateBulkSliders() {
+  const sp = parseFloat(document.getElementById('bulkSpeedSlider').value);
+  const amp = parseFloat(document.getElementById('bulkAmpSlider').value);
+  document.getElementById('bulkSpeedVal').textContent = sp.toFixed(4)+'x';
+  const ae = document.getElementById('bulkAmpVal');
+  ae.textContent = (amp>=0?'+':'')+amp.toFixed(1)+' dB';
+  ae.className = 'slider-val'+(Math.abs(amp)<0.01?' neutral':'');
+  paintSlider('bulkSpeedSlider', sp, 0.5, 5, 'var(--violet)');
+  paintSlider('bulkAmpSlider', amp, -20, 20, amp>=0?'var(--cyan)':'var(--pink)');
+}
+function paintSlider(id, val, min, max, color) {
+  const pct = ((val-min)/(max-min))*100;
+  document.getElementById(id).style.background = `linear-gradient(to right,${color} ${pct}%,var(--bg3) ${pct}%)`;
 }
 
-function onFileChange(){
-  const file=document.getElementById('audioFile').files[0];
-  if(!file)return;
-  currentFile=file;
-  document.getElementById('fdName').textContent='📄 '+file.name;
-  if(!document.getElementById('audioName').value)
-    document.getElementById('audioName').value=file.name.replace(/\.[^.]+$/,'');
-  document.getElementById('previewCard').classList.remove('show');
-  document.getElementById('result').className='result';
-  document.getElementById('prec').style.display='none';
+// ===== FILE HANDLERS =====
+function onBypassFile() {
+  const file = document.getElementById('bypassFile').files[0];
+  if(!file) return;
+  bypassFile = file;
+  document.getElementById('bypassFileName').textContent = '📄 '+file.name;
+  if(!document.getElementById('bypassName').value)
+    document.getElementById('bypassName').value = file.name.replace(/\.[^.]+$/,'');
+  document.getElementById('bypassPreview').classList.remove('show');
+  document.getElementById('bypassResult').className='result-panel';
+  document.getElementById('bypassPbRec').style.display='none';
 }
 
-function onBulkChange(){
-  const files=Array.from(document.getElementById('bulkFiles').files);
-  document.getElementById('bulkCount').textContent=`📁 ${files.length} file dipilih`;
-  document.getElementById('bulkList').innerHTML=files.map((f,i)=>`
-    <div class="bulk-item" id="bi-${i}">
-      <div class="bi-status" id="bis-${i}">·</div>
-      <div class="bi-name">${f.name}</div>
-      <div class="bi-size">${(f.size/1024/1024).toFixed(1)}MB</div>
-    </div>`).join('');
-  document.getElementById('bulkSummary').classList.remove('show');
-  bulkResults=[];
+function onBulkBypassFiles() {
+  const files = Array.from(document.getElementById('bulkBypassFiles').files);
+  document.getElementById('bulkBypassCount').textContent = `📁 ${files.length} file dipilih`;
+  document.getElementById('bulkBypassList').innerHTML = files.map((f,i)=>bulkItemHtml(i,'bb',f.name,f.size)).join('');
+  document.getElementById('bulkBypassSummary').classList.remove('show');
 }
 
-function onDirectChange(){
-  const files=Array.from(document.getElementById('directFiles').files);
-  document.getElementById('directCount').textContent=`📁 ${files.length} file dipilih`;
-  document.getElementById('directList').innerHTML=files.map((f,i)=>`
-    <div class="bulk-item" id="di-${i}">
-      <div class="bi-status" id="dis-${i}">·</div>
-      <div class="bi-name">${f.name}</div>
-      <div class="bi-size">${(f.size/1024/1024).toFixed(1)}MB</div>
-    </div>`).join('');
+function onDirectFiles() {
+  const files = Array.from(document.getElementById('directFiles').files);
+  document.getElementById('directCount').textContent = `📁 ${files.length} file dipilih`;
+  document.getElementById('directList').innerHTML = files.map((f,i)=>bulkItemHtml(i,'d',f.name,f.size)).join('');
   document.getElementById('directSummary').classList.remove('show');
-  directResults=[];
 }
 
-async function doPreview(){
-  if(!currentFile){alert('Pilih file dulu!');return;}
-  setBtn('btnPreview',true,'Memproses...');showProg('pw','pb');
-  try{
+function bulkItemHtml(i, prefix, name, size) {
+  return `<div class="bulk-item" id="${prefix}-item-${i}">
+    <div class="bi-icon" id="${prefix}-icon-${i}">·</div>
+    <div class="bi-name">${name}</div>
+    <div class="bi-size">${(size/1024/1024).toFixed(1)}MB</div>
+  </div>`;
+}
+
+// ===== PREVIEW =====
+async function doBypassPreview() {
+  if(!bypassFile){alert('Pilih file dulu!');return;}
+  setBtn('btnBypassPreview',true,'Processing...');showProg('bypassProg','bypassProgBar');
+  try {
     const fd=new FormData();
-    fd.append('audio',currentFile);
+    fd.append('audio',bypassFile);
     fd.append('speed',document.getElementById('speedSlider').value);
     fd.append('amplify',document.getElementById('ampSlider').value);
     const res=await fetch('/api/preview',{method:'POST',body:fd});
     const data=await res.json();
-    if(!res.ok)throw new Error(data.error);
-    if(previewUrl)URL.revokeObjectURL(previewUrl);
-    const blob=new Blob([Uint8Array.from(atob(data.audio),c=>c.charCodeAt(0))],{type:'audio/mp3'});
+    if(!res.ok) throw new Error(data.error);
+    if(previewUrl) URL.revokeObjectURL(previewUrl);
+    const blob=new Blob([Uint8Array.from(atob(data.audio),c=>c.charCodeAt(0))],{type:'audio/ogg'});
     previewUrl=URL.createObjectURL(blob);
-    document.getElementById('previewPlayer').src=previewUrl;
-    document.getElementById('previewMeta').textContent=`Speed: ${document.getElementById('speedSlider').value}x  |  Amplify: ${document.getElementById('ampSlider').value}dB  |  Size: ${(data.size/1024).toFixed(1)}KB`;
-    document.getElementById('previewCard').classList.add('show');
-  }catch(e){alert('Preview gagal: '+e.message);}
-  hideProg('pw','pb');setBtn('btnPreview',false,'🎧 Preview');
+
+    // Audio 1: bypass result at normal speed
+    const a1=document.getElementById('bypassAudio');
+    a1.src=previewUrl;
+
+    // Audio 2: same file but with PlaybackSpeed applied (simulate Roblox)
+    const sp=parseFloat(document.getElementById('speedSlider').value);
+    const ps=Math.round((1/sp)*100000)/100000;
+    const a2=document.getElementById('bypassAudioPb');
+    a2.src=previewUrl;
+    a2.playbackRate=Math.min(Math.max(ps, 0.1), 4.0); // clamp browser limit
+
+    document.getElementById('bypassPreviewMeta').textContent=
+      `Speed bypass: ${document.getElementById('speedSlider').value}x  ·  Size: ${(data.size/1024).toFixed(1)}KB`;
+    document.getElementById('bypassPreviewPbMeta').textContent=
+      `PlaybackSpeed ${ps.toFixed(4)} diterapkan — ini yang terdengar di Roblox`;
+
+    document.getElementById('bypassPreview').classList.add('show');
+  } catch(e){alert('Preview gagal: '+e.message);}
+  hideProg('bypassProg','bypassProgBar');setBtn('btnBypassPreview',false,'🎧 Preview');
 }
 
-async function doUpload(){
+// ===== SINGLE BYPASS UPLOAD =====
+async function doBypassUpload() {
   if(!apiKey){alert('Setup API Key dulu!');openModal();return;}
-  if(!currentFile){alert('Pilih file dulu!');return;}
-  const name=document.getElementById('audioName').value.trim();
+  if(!bypassFile){alert('Pilih file dulu!');return;}
+  const name=document.getElementById('bypassName').value.trim();
   if(!name){alert('Masukkan nama audio!');return;}
-  if(creatorType==='group'&&!document.getElementById('groupSelect').value){alert('Pilih komunitas dulu!');return;}
-  setBtn('btnUpload',true,'Uploading...');showProg('pw','pb');
-  try{
+  const groupId=targets.bypass==='group'?document.getElementById('bypassGroup').value:'';
+  if(targets.bypass==='group'&&!groupId){alert('Pilih komunitas dulu!');return;}
+
+  setBtn('btnBypassUpload',true,'Uploading...');showProg('bypassProg','bypassProgBar');
+
+  try {
     const fd=new FormData();
-    fd.append('audio',currentFile);
-    fd.append('apiKey',apiKey);fd.append('userId',userId);
-    fd.append('name',name);fd.append('description',document.getElementById('audioDesc').value.trim());
+    fd.append('audio',bypassFile);
+    fd.append('apiKey',apiKey);
+    fd.append('userId',userId);
+    fd.append('name',name);
+    fd.append('description',document.getElementById('bypassDesc').value.trim());
     fd.append('speed',document.getElementById('speedSlider').value);
     fd.append('amplify',document.getElementById('ampSlider').value);
-    if(creatorType==='group')fd.append('groupId',document.getElementById('groupSelect').value);
+    if(groupId) fd.append('groupId',groupId);
+
     const res=await fetch('/api/process-upload',{method:'POST',body:fd});
     const data=await res.json();
-    if(!res.ok)throw new Error(data.error);
-    hideProg('pw','pb');
-    document.getElementById('result').className='result show ok';
-    document.getElementById('rlbl').textContent='✅ Asset ID Baru';
-    document.getElementById('rval').textContent=String(data.assetId).replace('pending:','');
-    document.getElementById('copyBtn').style.display='inline-flex';
-    window._lastId=String(data.assetId).replace('pending:','');
-    window._lastName=name;
+    if(!res.ok) throw new Error(data.error);
+
+    hideProg('bypassProg','bypassProgBar');
+    const panel=document.getElementById('bypassResult');
+    panel.className='result-panel show ok';
+    document.getElementById('bypassResultLbl').textContent='✅ Asset ID Baru';
+    const idStr=String(data.assetId).replace('pending:','');
+    document.getElementById('bypassResultVal').textContent=idStr;
+    document.getElementById('bypassCopyId').style.display='inline-flex';
+    window._bid=idStr; window._bname=name;
+
+    // Playback speed rec
     const sp=parseFloat(document.getElementById('speedSlider').value);
-    const ps=Math.round((1/sp)*10000)/10000;
-    window._lastPs=ps;
-    document.getElementById('precSval').textContent=ps.toFixed(4);
-    document.getElementById('precFormula').textContent=`1 ÷ ${sp.toFixed(2)}x = ${ps.toFixed(4)}`;
-    document.getElementById('precCode').innerHTML=genEntry(window._lastId,ps,name);
-    document.getElementById('prec').style.display='block';
-  }catch(e){
-    hideProg('pw','pb');
-    document.getElementById('result').className='result show err';
-    document.getElementById('rlbl').textContent='❌ Error';
-    document.getElementById('rval').textContent=e.message;
-    document.getElementById('copyBtn').style.display='none';
-    document.getElementById('prec').style.display='none';
+    const ps=Math.round((1/sp)*100000)/100000;
+    window._bps=ps;
+    document.getElementById('bypassPbVal').textContent=ps.toFixed(4);
+    document.getElementById('bypassPbFormula').textContent=`1 ÷ ${sp.toFixed(4)}x = ${ps.toFixed(4)}`;
+    document.getElementById('bypassPbCode').innerHTML=luaEntry(idStr,ps,name);
+    document.getElementById('bypassPbRec').style.display='block';
+  } catch(e) {
+    hideProg('bypassProg','bypassProgBar');
+    document.getElementById('bypassResult').className='result-panel show err';
+    document.getElementById('bypassResultLbl').textContent='❌ Error';
+    document.getElementById('bypassResultVal').textContent=e.message;
+    document.getElementById('bypassCopyId').style.display='none';
+    document.getElementById('bypassPbRec').style.display='none';
   }
-  setBtn('btnUpload',false,'⬆️ Upload');
+  setBtn('btnBypassUpload',false,'⚡ Upload ke Roblox');
 }
 
-async function doBulk(withBypass){
+// ===== BULK UPLOAD (bypass + direct) =====
+async function doBulkUpload(withBypass) {
   if(!apiKey){alert('Setup API Key dulu!');openModal();return;}
-  const isBulk=withBypass;
-  const filesEl=isBulk?'bulkFiles':'directFiles';
-  const prefixEl=isBulk?'bulkPrefix':'directPrefix';
-  const btnId=isBulk?'btnBulk':'btnDirect';
-  const summaryId=isBulk?'bulkSummary':'directSummary';
-  const totalId=isBulk?'bsTotal':'dsTotal';
-  const okId=isBulk?'bsOk':'dsOk';
-  const failId=isBulk?'bsFail':'dsFail';
-  const listId=isBulk?'bsList':'dsList';
-  const wrapId=isBulk?'bpw':'dpw';
-  const barId=isBulk?'bpb':'dpb';
-
-  const files=document.getElementById(filesEl).files;
+  const filesEl = withBypass ? 'bulkBypassFiles' : 'directFiles';
+  const files = document.getElementById(filesEl).files;
   if(!files.length){alert('Pilih file dulu!');return;}
-  if(creatorType==='group'&&!document.getElementById('groupSelect').value){alert('Pilih komunitas dulu!');return;}
+
+  const scope = withBypass ? 'bulk' : 'direct';
+  const groupId = targets[scope]==='group' ? (withBypass?document.getElementById('bulkGroup').value:document.getElementById('directGroup').value) : '';
+  if(targets[scope]==='group'&&!groupId){alert('Pilih komunitas dulu!');return;}
+
+  const prefix = withBypass ? 'bulkBypass' : 'direct';
+  const itemPrefix = withBypass ? 'bb' : 'd';
+  const speed = withBypass ? document.getElementById('bulkSpeedSlider').value : '1';
+  const amplify = withBypass ? document.getElementById('bulkAmpSlider').value : '0';
+  const namePrefix = withBypass ? document.getElementById('bulkBypassPrefix').value.trim() : document.getElementById('directPrefix').value.trim();
+
+  const btnId = withBypass ? 'btnBulkBypass' : 'btnDirect';
+  const progId = prefix+'Prog';
+  const progBarId = prefix+'ProgBar';
+  const summaryId = prefix+'Summary';
 
   setBtn(btnId,true,`Uploading 0/${files.length}...`);
-  showProg(wrapId,barId);
-  if(isBulk)bulkResults=[];else directResults=[];
+  showProg(progId,progBarId);
+  document.getElementById(summaryId).classList.add('show');
+
+  const totalEl=withBypass?'bbTotal':'dTotal';
+  const okEl=withBypass?'bbOk':'dOk';
+  const failEl=withBypass?'bbFail':'dFail';
+  const resListEl=withBypass?'bulkBypassResults':'directResults';
+  document.getElementById(totalEl).textContent=files.length;
+  document.getElementById(resListEl).innerHTML='';
 
   const fd=new FormData();
   Array.from(files).forEach(f=>fd.append('audio',f));
-  fd.append('apiKey',apiKey);fd.append('userId',userId);
-  fd.append('speed',withBypass?document.getElementById('speedSlider').value:'1');
-  fd.append('amplify',withBypass?document.getElementById('ampSlider').value:'0');
-  fd.append('namePrefix',document.getElementById(prefixEl).value.trim());
-  if(creatorType==='group')fd.append('groupId',document.getElementById('groupSelect').value);
+  fd.append('apiKey',apiKey);
+  fd.append('userId',userId);
+  fd.append('speed',speed);
+  fd.append('amplify',amplify);
+  fd.append('namePrefix',namePrefix);
+  if(groupId) fd.append('groupId',groupId);
 
   let okCount=0,failCount=0;
-  document.getElementById(summaryId).classList.add('show');
+  const spd = parseFloat(speed);
+  const resultStore = [];
 
-  try{
+  try {
     const res=await fetch('/api/bulk-upload',{method:'POST',body:fd});
     const reader=res.body.getReader();
-    const decoder=new TextDecoder();
+    const dec=new TextDecoder();
     let buf='';
     while(true){
       const {done,value}=await reader.read();
       if(done)break;
-      buf+=decoder.decode(value,{stream:true});
+      buf+=dec.decode(value,{stream:true});
       const lines=buf.split('\n');buf=lines.pop();
       for(const line of lines){
         if(!line.startsWith('data:'))continue;
@@ -668,113 +1368,213 @@ async function doBulk(withBypass){
           const ev=JSON.parse(line.slice(5));
           if(ev.type==='progress'){
             const pct=((ev.index+1)/ev.total)*100;
-            document.getElementById(barId).style.width=pct+'%';
+            document.getElementById(progBarId).style.width=pct+'%';
             setBtn(btnId,true,`Uploading ${ev.index+1}/${ev.total}...`);
-            const pfx=isBulk?'bi':'di';
-            const item=document.getElementById(pfx+'-'+ev.index);
-            const status=document.getElementById(pfx+'s-'+ev.index);
+
+            const item=document.getElementById(itemPrefix+'-item-'+ev.index);
+            const icon=document.getElementById(itemPrefix+'-icon-'+ev.index);
+
             if(ev.status==='processing'){
               if(item)item.className='bulk-item processing';
-              if(status)status.innerHTML='<span class="spinner" style="width:10px;height:10px;border-width:1.5px"></span>';
-            }else if(ev.status==='success'){
-              if(item){item.className='bulk-item success';item.insertAdjacentHTML('beforeend',`<span class="bi-id">${ev.assetId}</span>`);}
-              if(status)status.textContent='✓';
+              if(icon)icon.innerHTML='<span class="spinner" style="width:10px;height:10px;border-width:1.5px"></span>';
+            } else if(ev.status==='success'){
+              if(item){item.className='bulk-item success';const sizeEl=item.querySelector('.bi-size');if(sizeEl)sizeEl.textContent='';}
+              if(icon)icon.textContent='✓';
               okCount++;
-            }else if(ev.status==='error'){
+              const ps = withBypass ? Math.round((1/spd)*100000)/100000 : 1;
+              resultStore.push({name:ev.name,assetId:ev.assetId,ps,status:'success'});
+              // Add to result list
+              document.getElementById(resListEl).insertAdjacentHTML('beforeend',
+                `<div class="bs-item ok"><span>✅</span><span class="bsi-name">${ev.name}</span><span class="bsi-id">${ev.assetId}</span></div>`);
+            } else if(ev.status==='error'){
               if(item)item.className='bulk-item error';
-              if(status)status.textContent='✗';
+              if(icon)icon.textContent='✗';
               failCount++;
+              resultStore.push({name:ev.name,status:'error',error:ev.error});
+              document.getElementById(resListEl).insertAdjacentHTML('beforeend',
+                `<div class="bs-item fail"><span>❌</span><span class="bsi-name">${ev.name}</span><span class="bsi-err">${ev.error||'error'}</span></div>`);
             }
-            document.getElementById(totalId).textContent=ev.total;
-            document.getElementById(okId).textContent=okCount;
-            document.getElementById(failId).textContent=failCount;
-          }else if(ev.type==='done'){
-            const results=ev.results||[];
-            if(isBulk)bulkResults=results;else directResults=results;
-            const sp=withBypass?parseFloat(document.getElementById('speedSlider').value):1;
-            renderBulkSummary(results,listId,sp,withBypass);
+            document.getElementById(okEl).textContent=okCount;
+            document.getElementById(failEl).textContent=failCount;
           }
         }catch(e){}
       }
     }
-  }catch(e){alert('Upload error: '+e.message);}
-  hideProg(wrapId,barId);
-  setBtn(btnId,false,withBypass?'⬆️ Bulk Upload + Bypass':'⬆️ Upload Langsung');
+  }catch(e){alert('Bulk error: '+e.message);}
+
+  if(withBypass) bulkBypassResultsData=resultStore;
+  else directResultsData=resultStore;
+
+  hideProg(progId,progBarId);
+  setBtn(btnId,false,withBypass?'⚡ Bulk Bypass Upload':'⬆️ Upload Langsung');
 }
 
-function renderBulkSummary(results,listId,speed,withBypass){
-  const ps=withBypass?Math.round((1/speed)*10000)/10000:1;
-  document.getElementById(listId).innerHTML=results.map(r=>`
-    <div class="bs-item ${r.status==='success'?'ok':'fail'}">
-      <span>${r.status==='success'?'✅':'❌'}</span>
-      <span class="bsi-name">${r.name}</span>
-      ${r.status==='success'?`<span class="bsi-id">${r.assetId}</span>`:`<span class="bsi-err">${r.error||'error'}</span>`}
-    </div>`).join('');
-}
-
-function copyBulkIds(type){
-  const results=type==='bulk'?bulkResults:directResults;
-  const sp=type==='bulk'?parseFloat(document.getElementById('speedSlider').value):1;
-  const ps=type==='bulk'?Math.round((1/sp)*10000)/10000:1;
-  const entries=results.filter(r=>r.status==='success').map(r=>
-    `\t\t{\n\t\t\tSongName = "${r.name}",\n\t\t\tSoundId = "rbxassetid://${r.assetId}",\n\t\t\tImageId = "rbxassetid://",\n\t\t\tPlaybackSpeed = ${ps.toFixed(4)},\n\t\t},`
-  ).join('\n');
-  if(!entries){alert('Belum ada yang berhasil');return;}
-  navigator.clipboard.writeText(entries).then(()=>alert('✓ Semua Lua entry tersalin!'));
-}
-
-function genEntry(id,ps,name){
-  return `\t\t{\n\t\t\t<span class="kw">SongName</span> = <span class="str">"${name}"</span>,\n\t\t\t<span class="kw">SoundId</span> = <span class="str">"rbxassetid://${id}"</span>,\n\t\t\t<span class="kw">ImageId</span> = <span class="str">"rbxassetid://"</span>,\n\t\t\t<span class="kw">PlaybackSpeed</span> = <span class="num">${ps.toFixed(4)}</span>,\n\t\t},`;
-}
-
-function copyId(){
-  if(window._lastId){
-    navigator.clipboard.writeText(window._lastId).then(()=>{
-      const b=document.getElementById('copyBtn');b.textContent='✓ Tersalin!';setTimeout(()=>b.textContent='📋 Copy ID',1500);
-    });
-  }
-}
-
-function copyScript(){
-  const ps=(window._lastPs||1).toFixed(4);
-  const raw=`\t\t{\n\t\t\tSongName = "${window._lastName}",\n\t\t\tSoundId = "rbxassetid://${window._lastId}",\n\t\t\tImageId = "rbxassetid://",\n\t\t\tPlaybackSpeed = ${ps},\n\t\t},`;
-  navigator.clipboard.writeText(raw).then(()=>{
-    const btns=document.querySelectorAll('.prec .copy-btn');
-    btns.forEach(b=>{b.textContent='✓ Tersalin!';setTimeout(()=>b.textContent='📋 Copy Entry',1500);});
+// ===== PERMISSION =====
+function setPermMethod(method) {
+  permMethod = method;
+  ['public','group','user'].forEach(m => {
+    document.getElementById('perm'+m.charAt(0).toUpperCase()+m.slice(1)).classList.toggle('active',m===method);
+    document.getElementById('permSection'+m.charAt(0).toUpperCase()+m.slice(1)).classList.toggle('active',m===method);
   });
 }
 
-function resetSingle(){
-  currentFile=null;
-  document.getElementById('audioFile').value='';
-  document.getElementById('fdName').textContent='';
-  document.getElementById('audioName').value='';
-  document.getElementById('audioDesc').value='';
+function addPermTarget() {
+  const input = document.getElementById('permTargetInput');
+  const val = input.value.trim();
+  if(!val || permTargets.includes(val)) { input.value=''; return; }
+  permTargets.push(val);
+  renderPermTargets();
+  input.value='';
+}
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('permTargetInput')?.addEventListener('keydown', e => { if(e.key==='Enter'){e.preventDefault();addPermTarget();} });
+});
+
+function removePermTarget(val) {
+  permTargets = permTargets.filter(t=>t!==val);
+  renderPermTargets();
+}
+function renderPermTargets() {
+  document.getElementById('permTargetList').innerHTML = permTargets.map(t=>
+    `<div class="tag">${t}<span class="tag-x" onclick="removePermTarget('${t}')">✕</span></div>`
+  ).join('');
+}
+function updatePermCount() {
+  const ids = getPermAssetIds();
+  document.getElementById('permCount').textContent = ids.length + ' asset ID';
+}
+function getPermAssetIds() {
+  return document.getElementById('permAssetIds').value.split('\n').map(l=>l.trim()).filter(l=>l && /^\d+$/.test(l));
+}
+function clearPermIds() { document.getElementById('permAssetIds').value=''; updatePermCount(); }
+
+async function doPermission() {
+  if(!apiKey){alert('Setup API Key dulu!');openModal();return;}
+  const assetIds = getPermAssetIds();
+  if(!assetIds.length){alert('Masukkan minimal 1 Asset ID!');return;}
+
+  let target = null;
+  if(permMethod==='group') {
+    const gid = document.getElementById('permGroupSelect').value;
+    if(!gid){alert('Pilih komunitas dulu!');return;}
+    target = { type:'group', id: gid };
+  } else if(permMethod==='user') {
+    if(!permTargets.length){alert('Tambahkan minimal 1 User/Universe ID!');return;}
+    target = { type: document.getElementById('permTargetType').value, ids: permTargets };
+  } else {
+    target = { type:'public' };
+  }
+
+  setBtn('btnPerm',true,`Processing 0/${assetIds.length}...`);
+  showProg('permProg','permProgBar');
+  document.getElementById('permSummary').classList.add('show');
+  document.getElementById('permResults').innerHTML='';
+  document.getElementById('pTotal').textContent=assetIds.length;
+
+  let okCount=0,failCount=0;
+
+  for(let i=0;i<assetIds.length;i++){
+    const id=assetIds[i];
+    setBtn('btnPerm',true,`Processing ${i+1}/${assetIds.length}...`);
+    document.getElementById('permProgBar').style.width=((i+1)/assetIds.length*100)+'%';
+
+    try {
+      const res = await fetch('/api/set-permission', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ apiKey, assetId: id, target })
+      });
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.error||'Gagal');
+      okCount++;
+      document.getElementById('permResults').insertAdjacentHTML('beforeend',
+        `<div class="perm-result-item ok"><span>✅</span><span class="pri-id">${id}</span><span class="pri-status ok">Permission set</span></div>`);
+    } catch(e) {
+      failCount++;
+      document.getElementById('permResults').insertAdjacentHTML('beforeend',
+        `<div class="perm-result-item fail"><span>❌</span><span class="pri-id">${id}</span><span class="pri-status fail">${e.message}</span></div>`);
+    }
+
+    document.getElementById('pOk').textContent=okCount;
+    document.getElementById('pFail').textContent=failCount;
+    if(i<assetIds.length-1) await sleep(500);
+  }
+
+  hideProg('permProg','permProgBar');
+  setBtn('btnPerm',false,'🔐 Set Permission Bulk');
+}
+
+// ===== HELPERS =====
+function luaEntry(id,ps,name) {
+  return `<span class="cm">-- PlaybackSpeed = 1 ÷ ${(1/ps).toFixed(4)}x bypass</span>
+<span class="kw">{</span>
+    SongName = <span class="str">"${name}"</span>,
+    SoundId = <span class="str">"rbxassetid://${id}"</span>,
+    ImageId = <span class="str">"rbxassetid://"</span>,
+    PlaybackSpeed = <span class="num">${ps.toFixed(4)}</span>,
+<span class="kw">},</span>`;
+}
+
+function copyBulkEntries(dataVar, withBypass) {
+  const data = withBypass ? bulkBypassResultsData : directResultsData;
+  const entries = data.filter(r=>r.status==='success').map(r=>
+    `\t\t{\n\t\t\tSongName = "${r.name}",\n\t\t\tSoundId = "rbxassetid://${r.assetId}",\n\t\t\tImageId = "rbxassetid://",\n\t\t\tPlaybackSpeed = ${(r.ps||1).toFixed(4)},\n\t\t},`
+  ).join('\n');
+  if(!entries){alert('Belum ada yang berhasil!');return;}
+  navigator.clipboard.writeText(entries).then(()=>alert('✓ Semua Lua entry tersalin!'));
+}
+
+function copyScript() {
+  const raw=`\t\t{\n\t\t\tSongName = "${window._bname}",\n\t\t\tSoundId = "rbxassetid://${window._bid}",\n\t\t\tImageId = "rbxassetid://",\n\t\t\tPlaybackSpeed = ${(window._bps||1).toFixed(4)},\n\t\t},`;
+  navigator.clipboard.writeText(raw).then(()=>{
+    const btns=document.querySelectorAll('.pb-rec .copy-btn');
+    btns.forEach(b=>{const t=b.textContent;b.textContent='✓ Tersalin!';setTimeout(()=>b.textContent=t,1500);});
+  });
+}
+
+function copyText(text,btnId){
+  if(!text)return;
+  navigator.clipboard.writeText(text).then(()=>{
+    const b=document.getElementById(btnId)||document.querySelector('[onclick*="'+btnId+'"]');
+    if(b){const t=b.textContent;b.textContent='✓ Tersalin!';setTimeout(()=>b.textContent=t,1500);}
+  });
+}
+
+function resetBypass(){
+  bypassFile=null;
+  document.getElementById('bypassFile').value='';
+  document.getElementById('bypassFileName').textContent='';
+  document.getElementById('bypassName').value='';
+  document.getElementById('bypassDesc').value='';
   document.getElementById('speedSlider').value=2.3256;
   document.getElementById('ampSlider').value=0;
-  document.getElementById('previewCard').classList.remove('show');
-  document.getElementById('result').className='result';
-  document.getElementById('prec').style.display='none';
+  document.getElementById('bypassPreview').classList.remove('show');
+  document.getElementById('bypassResult').className='result-panel';
+  document.getElementById('bypassPbRec').style.display='none';
   if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=null;}
   updateSliders();
 }
 
-let progIv={};
+let progIvs={};
 function showProg(wid,bid){
-  const w=document.getElementById(wid);const b=document.getElementById(bid);
+  const w=document.getElementById(wid),b=document.getElementById(bid);
+  if(!w||!b)return;
   w.classList.add('show');b.style.width='0%';
-  clearInterval(progIv[wid]);let v=0;
-  progIv[wid]=setInterval(()=>{v=Math.min(v+Math.random()*7,85);b.style.width=v+'%';},350);
+  clearInterval(progIvs[wid]);let v=0;
+  progIvs[wid]=setInterval(()=>{v=Math.min(v+Math.random()*6,85);b.style.width=v+'%';},400);
 }
 function hideProg(wid,bid){
-  clearInterval(progIv[wid]);
-  document.getElementById(bid).style.width='100%';
-  setTimeout(()=>{document.getElementById(wid).classList.remove('show');document.getElementById(bid).style.width='0%';},600);
+  clearInterval(progIvs[wid]);
+  const b=document.getElementById(bid);
+  if(b)b.style.width='100%';
+  setTimeout(()=>{const w=document.getElementById(wid);if(w)w.classList.remove('show');if(b)b.style.width='0%';},600);
 }
 function setBtn(id,loading,text){
-  const b=document.getElementById(id);b.disabled=loading;
+  const b=document.getElementById(id);if(!b)return;
+  b.disabled=loading;
   b.innerHTML=loading?`<span class="spinner"></span> ${text}`:text;
 }
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 </script>
 </body>
 </html>
