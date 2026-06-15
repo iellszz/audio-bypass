@@ -687,21 +687,41 @@ audio { width: 100%; border-radius: 6px; accent-color: var(--violet); }
                 <div class="card-icon">⚙️</div>
                 <div><div class="card-title">Audio Settings</div></div>
               </div>
+
+              <!-- SPEED -->
               <div class="slider-group">
                 <div class="slider-row">
                   <span class="slider-label">Speed <span class="slider-badge">default 2.3256x</span></span>
-                  <span class="slider-val" id="speedVal">2.3256x</span>
+                  <input type="number" id="speedInput" min="0.5" max="10" step="0.0001" value="2.3256"
+                    style="width:90px;font-family:var(--mono);font-size:13px;font-weight:600;color:var(--violet2);background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.2);border-radius:7px;padding:3px 8px;outline:none;text-align:center"
+                    oninput="syncFromInput('speed')">
                 </div>
                 <input type="range" id="speedSlider" min="0.5" max="5" step="0.0001" value="2.3256" oninput="updateSliders()">
                 <div class="range-ends"><span>0.5x</span><span>5.0x</span></div>
               </div>
-              <div class="slider-group" style="margin-bottom:0">
+
+              <!-- AMPLIFY -->
+              <div class="slider-group">
                 <div class="slider-row">
                   <span class="slider-label">Amplify <span class="slider-badge">default 0dB</span></span>
-                  <span class="slider-val neutral" id="ampVal">0.0 dB</span>
+                  <input type="number" id="ampInput" min="-20" max="20" step="0.5" value="0"
+                    style="width:90px;font-family:var(--mono);font-size:13px;font-weight:600;color:var(--text2);background:rgba(255,255,255,0.04);border:1px solid var(--border2);border-radius:7px;padding:3px 8px;outline:none;text-align:center"
+                    oninput="syncFromInput('amp')">
                 </div>
                 <input type="range" id="ampSlider" min="-20" max="20" step="0.5" value="0" oninput="updateSliders()">
                 <div class="range-ends"><span>-20dB</span><span>+20dB</span></div>
+              </div>
+
+              <!-- PITCH -->
+              <div class="slider-group" style="margin-bottom:0">
+                <div class="slider-row">
+                  <span class="slider-label">Pitch Shift <span class="slider-badge">semitones</span></span>
+                  <input type="number" id="pitchInput" min="-12" max="12" step="0.1" value="0"
+                    style="width:90px;font-family:var(--mono);font-size:13px;font-weight:600;color:var(--cyan);background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.2);border-radius:7px;padding:3px 8px;outline:none;text-align:center"
+                    oninput="syncFromInput('pitch')">
+                </div>
+                <input type="range" id="pitchSlider" min="-12" max="12" step="0.1" value="0" oninput="updateSliders()">
+                <div class="range-ends"><span>-12st</span><span>+12st</span></div>
               </div>
             </div>
 
