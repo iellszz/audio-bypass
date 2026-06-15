@@ -735,10 +735,27 @@ audio { width: 100%; border-radius: 6px; accent-color: var(--violet); }
           <div class="preview-label">🎧 Preview Bypass (kecepatan asli file)</div>
           <audio id="bypassAudio" controls></audio>
           <div class="preview-meta" id="bypassPreviewMeta"></div>
-          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border2)">
+          <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border2)">
             <div class="preview-label" style="color:var(--green)">🎯 Preview dengan PlaybackSpeed (seperti di Roblox)</div>
             <audio id="bypassAudioPb" controls></audio>
-            <div class="preview-meta" id="bypassPreviewPbMeta">PlaybackSpeed akan diterapkan setelah upload selesai</div>
+            <div class="preview-meta" id="bypassPreviewPbMeta"></div>
+            <!-- PlaybackSpeed slider -->
+            <div style="margin-top:12px;background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.15);border-radius:10px;padding:12px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <span style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.7px">PlaybackSpeed</span>
+                <span id="pbSpeedDisplay" style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--green);background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);padding:3px 10px;border-radius:6px">0.4300</span>
+              </div>
+              <input type="range" id="pbSpeedSlider" min="0.1" max="2" step="0.0001" value="0.43" oninput="applyPbSpeed()" style="width:100%">
+              <div style="display:flex;justify-content:space-between;margin-top:4px">
+                <span style="font-size:10px;color:var(--text3);font-family:var(--mono)">0.10</span>
+                <span style="font-size:10px;color:var(--text3);font-family:var(--mono)">2.00</span>
+              </div>
+              <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+                <button class="btn btn-ghost btn-sm" onclick="setPbSpeed(0.4300)">0.4300 (2.3256x)</button>
+                <button class="btn btn-ghost btn-sm" onclick="setPbSpeed(0.5)">0.5000</button>
+                <button class="btn btn-ghost btn-sm" onclick="setPbSpeed(1.0)">1.0000 (normal)</button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1240,7 +1257,14 @@ async function doBypassPreview() {
     const ps=Math.round((1/sp)*100000)/100000;
     const a2=document.getElementById('bypassAudioPb');
     a2.src=previewUrl;
-    a2.playbackRate=Math.min(Math.max(ps, 0.1), 4.0); // clamp browser limit
+    a2.playbackRate=Math.min(Math.max(ps, 0.1), 4.0);
+
+    // Set slider to calculated PlaybackSpeed
+    const slider = document.getElementById('pbSpeedSlider');
+    if (slider) { slider.value = Math.min(Math.max(ps, 0.1), 2.0); }
+    const disp = document.getElementById('pbSpeedDisplay');
+    if (disp) disp.textContent = ps.toFixed(4);
+    applyPbSpeed(); // clamp browser limit
 
     document.getElementById('bypassPreviewMeta').textContent=
       `Speed bypass: ${document.getElementById('speedSlider').value}x  ·  Size: ${(data.size/1024).toFixed(1)}KB`;
@@ -1522,6 +1546,26 @@ function copyBulkEntries(dataVar, withBypass) {
   ).join('\n');
   if(!entries){alert('Belum ada yang berhasil!');return;}
   navigator.clipboard.writeText(entries).then(()=>alert('✓ Semua Lua entry tersalin!'));
+}
+
+function applyPbSpeed() {
+  const ps = parseFloat(document.getElementById('pbSpeedSlider').value);
+  const a2 = document.getElementById('bypassAudioPb');
+  if (a2) {
+    a2.playbackRate = Math.min(Math.max(ps, 0.1), 4.0);
+  }
+  const disp = document.getElementById('pbSpeedDisplay');
+  if (disp) disp.textContent = ps.toFixed(4);
+  const meta = document.getElementById('bypassPreviewPbMeta');
+  if (meta) meta.textContent = `PlaybackSpeed ${ps.toFixed(4)} — bypass speed equiv: ${(1/ps).toFixed(4)}x`;
+  const pct = ((ps - 0.1) / (2 - 0.1)) * 100;
+  const slider = document.getElementById('pbSpeedSlider');
+  if (slider) slider.style.background = `linear-gradient(to right, var(--green) ${pct}%, var(--bg3) ${pct}%)`;
+}
+
+function setPbSpeed(val) {
+  const slider = document.getElementById('pbSpeedSlider');
+  if (slider) { slider.value = val; applyPbSpeed(); }
 }
 
 function copyScript() {
