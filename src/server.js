@@ -46,9 +46,10 @@ app.post('/api/process-upload', upload.single('audio'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'File tidak ditemukan' });
     const speedVal = Math.max(0.5, Math.min(10, parseFloat(speed) || 1));
     const amplifyVal = Math.max(-30, Math.min(30, parseFloat(amplify) || 0));
+    const pitchVal = Math.max(-12, Math.min(12, parseFloat(req.body.pitch) || 0));
     const safeName = sanitizeName(name);
     const creator = resolveCreator(userId, groupId);
-    await processAudio(inputPath, outputPath, speedVal, amplifyVal);
+    await processAudio(inputPath, outputPath, speedVal, amplifyVal, pitchVal);
     const assetId = await uploadToRoblox(outputPath, apiKey, creator, safeName, description || '');
     res.json({ success: true, assetId, name: safeName });
   } catch(err) {
@@ -65,6 +66,7 @@ app.post('/api/bulk-upload', upload.array('audio', 50), async (req, res) => {
   if (!apiKey || !userId) return res.status(400).json({ error: 'apiKey dan userId wajib' });
   const speedVal = Math.max(0.5, Math.min(10, parseFloat(speed) || 1));
   const amplifyVal = Math.max(-30, Math.min(30, parseFloat(amplify) || 0));
+  const pitchVal = Math.max(-12, Math.min(12, parseFloat(req.body.pitch) || 0));
   const creator = resolveCreator(userId, groupId);
 
   res.setHeader('Content-Type', 'text/event-stream');
@@ -85,7 +87,7 @@ app.post('/api/bulk-upload', upload.array('audio', 50), async (req, res) => {
 
     send({ type: 'progress', index: i, total: files.length, name: safeName, status: 'processing' });
     try {
-      await processAudio(file.path, outputPath, speedVal, amplifyVal);
+      await processAudio(file.path, outputPath, speedVal, amplifyVal, pitchVal);
       const assetId = await uploadToRoblox(outputPath, apiKey, creator, safeName, '');
       results.push({ name: safeName, assetId, status: 'success' });
       send({ type: 'progress', index: i, total: files.length, name: safeName, status: 'success', assetId });
@@ -108,7 +110,8 @@ app.post('/api/preview', upload.single('audio'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'File tidak ditemukan' });
     const speedVal = Math.max(0.5, Math.min(10, parseFloat(req.body.speed) || 1));
     const amplifyVal = Math.max(-30, Math.min(30, parseFloat(req.body.amplify) || 0));
-    await processAudio(inputPath, outputPath, speedVal, amplifyVal);
+    const pitchVal = Math.max(-12, Math.min(12, parseFloat(req.body.pitch) || 0));
+    await processAudio(inputPath, outputPath, speedVal, amplifyVal, pitchVal);
     const audioData = fs.readFileSync(outputPath);
     res.json({ success: true, audio: audioData.toString('base64'), size: audioData.length });
   } catch(err) {
@@ -181,42 +184,151 @@ app.post('/api/set-permission', async (req, res) => {
   }
 });
 
-// ===== AUDIO PROCESSING =====
-function processAudio(inputPath, outputPath, speed, amplifyDb) {
+// Upload .rbxm model to Roblox Toolbox
+app.post('/api/upload-model', upload.array('model', 20), async (req, res) => {
+  const files = req.files || [];
+  if (!files.length) return res.status(400).json({ error: 'File tidak ditemukan' });
+
+  const { apiKey, userId, groupId, namePrefix, description } = req.body;
+  if (!apiKey || !userId) return res.status(400).json({ error: 'apiKey dan userId wajib' });
+
+  const creator = resolveCreator(userId, groupId);
+
+  // SSE for bulk, JSON for single
+  const isBulk = files.length > 1;
+  if (isBulk) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+  }
+
+  const send = (data) => {
+    if (isBulk) { try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch(e) {} }
+  };
+
+  if (isBulk) send({ type: 'start', total: files.length });
+  const results = [];
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const rawName = (() => { try { return Buffer.from(file.originalname,'latin1').toString('utf8'); } catch(e) { return file.originalname; } })();
+    const baseName = rawName.replace(/\.[^.]+$/, '');
+    const safeName = sanitizeName((namePrefix ? namePrefix + ' ' : '') + baseName);
+
+    if (isBulk) send({ type: 'progress', index: i, total: files.length, name: safeName, status: 'uploading' });
+
+    try {
+      const fileBuffer = fs.readFileSync(file.path);
+      if (fileBuffer.length > 100 * 1024 * 1024) throw new Error('File terlalu besar (max 100MB)');
+
+      // Detect format
+      const ext = rawName.split('.').pop().toLowerCase();
+      const contentType = ext === 'rbxmx' ? 'application/xml' : 'application/octet-stream';
+
+      const form = new FormData();
+      form.append('request', JSON.stringify({
+        displayName: safeName,
+        description: description || '',
+        assetType: 'Model',
+        creationContext: { creator }
+      }), { contentType: 'application/json' });
+      form.append('fileContent', fileBuffer, {
+        filename: `model.${ext}`,
+        contentType
+      });
+
+      const response = await axios.post('https://apis.roblox.com/assets/v1/assets', form, {
+        headers: { 'x-api-key': apiKey, ...form.getHeaders() },
+        maxContentLength: Infinity, maxBodyLength: Infinity,
+        timeout: 120000, validateStatus: () => true
+      });
+
+      console.log(`Model upload ${safeName}: status=${response.status}`, JSON.stringify(response.data));
+
+      if (response.status === 401) throw new Error('API Key tidak valid');
+      if (response.status === 403) throw new Error('API Key tidak punya permission Assets Write');
+      if (response.status >= 400) {
+        const msg = response.data?.message || response.data?.errors?.[0]?.message || JSON.stringify(response.data);
+        throw new Error(`Roblox ${response.status}: ${msg}`);
+      }
+
+      const data = response.data;
+      let assetId;
+
+      if (data.operationId) {
+        for (let j = 0; j < 20; j++) {
+          await sleep(3000);
+          try {
+            const op = await axios.get(`https://apis.roblox.com/assets/v1/operations/${data.operationId}`, {
+              headers: { 'x-api-key': apiKey }, validateStatus: () => true
+            });
+            if (op.data?.done) {
+              assetId = op.data?.response?.assetId || op.data?.assetId;
+              if (assetId) break;
+            }
+          } catch(e) {}
+        }
+        if (!assetId) assetId = `pending:${data.operationId}`;
+      } else {
+        assetId = data.assetId || data?.response?.assetId;
+        if (!assetId) throw new Error('Tidak ada assetId: ' + JSON.stringify(data));
+      }
+
+      results.push({ name: safeName, assetId, status: 'success' });
+      if (isBulk) send({ type: 'progress', index: i, total: files.length, name: safeName, status: 'success', assetId });
+
+    } catch(e) {
+      console.error(`Model upload error ${safeName}:`, e.message);
+      results.push({ name: safeName, status: 'error', error: e.message });
+      if (isBulk) send({ type: 'progress', index: i, total: files.length, name: safeName, status: 'error', error: e.message });
+    } finally {
+      cleanup(file.path);
+    }
+
+    if (i < files.length - 1) await sleep(1000);
+  }
+
+  if (isBulk) {
+    send({ type: 'done', results });
+    res.end();
+  } else {
+    const r = results[0];
+    if (r.status === 'success') res.json({ success: true, assetId: r.assetId, name: r.name });
+    else res.status(500).json({ error: r.error });
+  }
+});
+
+
+function processAudio(inputPath, outputPath, speed, amplifyDb, pitchSemitones) {
   return new Promise((resolve, reject) => {
-    const isDirect = Math.abs(speed - 1.0) < 0.001 && Math.abs(amplifyDb) < 0.001;
+    const isDirect = Math.abs(speed - 1.0) < 0.001 && Math.abs(amplifyDb) < 0.001 && (!pitchSemitones || Math.abs(pitchSemitones) < 0.01);
 
     let cmd = ffmpeg(inputPath)
       .audioChannels(2)
       .audioFrequency(44100)
-      .audioQuality(3);
+      .audioQuality(2);
 
     if (isDirect) {
-      // No filters — pure conversion
       cmd = cmd.toFormat('ogg');
     } else {
-      // Key insight: to avoid robot voice, we need to:
-      // 1. Resample UP to higher rate first (gives atempo more data to work with)
-      // 2. Apply atempo (pitch-preserving time stretch)
-      // 3. Resample back to 44100
-      // 4. Apply volume if needed
       const filters = [];
+      const pitch = parseFloat(pitchSemitones) || 0;
+      const pitchScale = Math.pow(2, pitch / 12);
 
-      // Step 1: upsample for better quality processing
-      filters.push('aresample=resampler=swr:sample_rate=96000:ocl=stereo');
+      // rubberband: professional quality time-stretch + pitch shift
+      // tempo = speed multiplier (>1 = faster)
+      // pitch = pitch scale (1.0 = no change, 2.0 = octave up)
+      // formant=preserved: keeps vocal formants natural (no chipmunk/robot)
+      // smoothing=on: smooth out artifacts
+      // window=long: better quality for music
+      filters.push(`rubberband=tempo=${speed.toFixed(6)}:pitch=${pitchScale.toFixed(6)}:window=long:smoothing=on:formant=preserved`);
 
-      // Step 2: atempo chain (each node 0.5–2.0)
-      let rem = speed;
-      while (rem > 2.0) { filters.push('atempo=2.0'); rem /= 2.0; }
-      while (rem < 0.5) { filters.push('atempo=0.5'); rem *= 2.0; }
-      if (Math.abs(rem - 1.0) > 0.0001) filters.push(`atempo=${rem.toFixed(8)}`);
+      if (Math.abs(amplifyDb) > 0.01) {
+        filters.push(`volume=${amplifyDb}dB`);
+      }
 
-      // Step 3: downsample back
-      filters.push('aresample=resampler=swr:sample_rate=44100');
-
-      // Step 4: volume
-      if (Math.abs(amplifyDb) > 0.01) filters.push(`volume=${amplifyDb}dB`);
-
+      console.log(`rubberband: speed=${speed} pitch=${pitch}st pitchScale=${pitchScale.toFixed(4)} amp=${amplifyDb}dB`);
       cmd = cmd.audioFilters(filters).toFormat('ogg');
     }
 
@@ -224,10 +336,33 @@ function processAudio(inputPath, outputPath, speed, amplifyDb) {
       .on('start', c => console.log('ffmpeg:', c))
       .on('end', resolve)
       .on('error', (err, _, stderr) => {
-        console.error('ffmpeg error:', err.message);
-        console.error('stderr:', stderr);
-        reject(new Error('ffmpeg: ' + err.message));
+        console.error('rubberband error:', err.message);
+        // Fallback to asetrate method (also good quality, no artifacts)
+        console.log('Falling back to asetrate...');
+        processAsetrate(inputPath, outputPath, speed, amplifyDb, pitchSemitones).then(resolve).catch(reject);
       })
+      .save(outputPath);
+  });
+}
+
+// Fallback: asetrate method (changes speed+pitch together, zero artifacts)
+function processAsetrate(inputPath, outputPath, speed, amplifyDb, pitchSemitones) {
+  return new Promise((resolve, reject) => {
+    const pitch = parseFloat(pitchSemitones) || 0;
+    const pitchFactor = Math.pow(2, pitch / 12);
+    const targetRate = Math.round(44100 * speed * pitchFactor);
+    const filters = [
+      `asetrate=${targetRate}`,
+      'aresample=44100'
+    ];
+    if (Math.abs(amplifyDb) > 0.01) filters.push(`volume=${amplifyDb}dB`);
+
+    console.log(`asetrate fallback: targetRate=${targetRate}`);
+    ffmpeg(inputPath)
+      .audioChannels(2).audioFrequency(44100).audioQuality(2)
+      .audioFilters(filters).toFormat('ogg')
+      .on('end', resolve)
+      .on('error', reject)
       .save(outputPath);
   });
 }
