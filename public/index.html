@@ -610,6 +610,10 @@ audio { width: 100%; border-radius: 6px; accent-color: var(--violet); }
         <span class="ni-icon">🔐</span> Bulk Permission
         <span class="nav-badge">NEW</span>
       </div>
+      <div class="nav-item" onclick="showPage('model',this)">
+        <span class="ni-icon">📦</span> Upload Model
+        <span class="nav-badge">NEW</span>
+      </div>
     </nav>
     <div class="sidebar-footer">
       <div class="api-status" onclick="openModal()">
@@ -692,9 +696,12 @@ audio { width: 100%; border-radius: 6px; accent-color: var(--violet); }
               <div class="slider-group">
                 <div class="slider-row">
                   <span class="slider-label">Speed <span class="slider-badge">default 2.3256x</span></span>
-                  <input type="number" id="speedInput" min="0.5" max="10" step="0.0001" value="2.3256"
-                    style="width:90px;font-family:var(--mono);font-size:13px;font-weight:600;color:var(--violet2);background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.2);border-radius:7px;padding:3px 8px;outline:none;text-align:center"
-                    oninput="syncFromInput('speed')">
+                  <div style="display:flex;gap:6px;align-items:center">
+                    <span class="slider-val" id="speedVal">2.3256x</span>
+                    <input type="number" id="speedInput" min="0.5" max="10" step="0.0001" value="2.3256"
+                      style="width:72px;font-family:var(--mono);font-size:12px;color:var(--violet2);background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.2);border-radius:7px;padding:3px 8px;outline:none;text-align:center"
+                      oninput="syncFromInput('speed')">
+                  </div>
                 </div>
                 <input type="range" id="speedSlider" min="0.5" max="5" step="0.0001" value="2.3256" oninput="updateSliders()">
                 <div class="range-ends"><span>0.5x</span><span>5.0x</span></div>
@@ -704,9 +711,12 @@ audio { width: 100%; border-radius: 6px; accent-color: var(--violet); }
               <div class="slider-group">
                 <div class="slider-row">
                   <span class="slider-label">Amplify <span class="slider-badge">default 0dB</span></span>
-                  <input type="number" id="ampInput" min="-20" max="20" step="0.5" value="0"
-                    style="width:90px;font-family:var(--mono);font-size:13px;font-weight:600;color:var(--text2);background:rgba(255,255,255,0.04);border:1px solid var(--border2);border-radius:7px;padding:3px 8px;outline:none;text-align:center"
-                    oninput="syncFromInput('amp')">
+                  <div style="display:flex;gap:6px;align-items:center">
+                    <span class="slider-val neutral" id="ampVal">0.0 dB</span>
+                    <input type="number" id="ampInput" min="-20" max="20" step="0.5" value="0"
+                      style="width:72px;font-family:var(--mono);font-size:12px;color:var(--text2);background:rgba(255,255,255,0.04);border:1px solid var(--border2);border-radius:7px;padding:3px 8px;outline:none;text-align:center"
+                      oninput="syncFromInput('amp')">
+                  </div>
                 </div>
                 <input type="range" id="ampSlider" min="-20" max="20" step="0.5" value="0" oninput="updateSliders()">
                 <div class="range-ends"><span>-20dB</span><span>+20dB</span></div>
@@ -716,9 +726,12 @@ audio { width: 100%; border-radius: 6px; accent-color: var(--violet); }
               <div class="slider-group" style="margin-bottom:0">
                 <div class="slider-row">
                   <span class="slider-label">Pitch Shift <span class="slider-badge">semitones</span></span>
-                  <input type="number" id="pitchInput" min="-12" max="12" step="0.1" value="0"
-                    style="width:90px;font-family:var(--mono);font-size:13px;font-weight:600;color:var(--cyan);background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.2);border-radius:7px;padding:3px 8px;outline:none;text-align:center"
-                    oninput="syncFromInput('pitch')">
+                  <div style="display:flex;gap:6px;align-items:center">
+                    <span class="slider-val neutral" id="pitchVal">0.0 st</span>
+                    <input type="number" id="pitchInput" min="-12" max="12" step="0.1" value="0"
+                      style="width:72px;font-family:var(--mono);font-size:12px;color:var(--cyan);background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.2);border-radius:7px;padding:3px 8px;outline:none;text-align:center"
+                      oninput="syncFromInput('pitch')">
+                  </div>
                 </div>
                 <input type="range" id="pitchSlider" min="-12" max="12" step="0.1" value="0" oninput="updateSliders()">
                 <div class="range-ends"><span>-12st</span><span>+12st</span></div>
@@ -763,7 +776,12 @@ audio { width: 100%; border-radius: 6px; accent-color: var(--violet); }
             <div style="margin-top:12px;background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.15);border-radius:10px;padding:12px">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
                 <span style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.7px">PlaybackSpeed</span>
-                <span id="pbSpeedDisplay" style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--green);background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);padding:3px 10px;border-radius:6px">0.4300</span>
+                <div style="display:flex;gap:6px;align-items:center">
+                  <span id="pbSpeedDisplay" style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--green);background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);padding:3px 10px;border-radius:6px">0.4300</span>
+                  <input type="number" id="pbSpeedInput" min="0.1" max="2" step="0.0001" value="0.43"
+                    style="width:72px;font-family:var(--mono);font-size:12px;color:var(--green);background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:7px;padding:3px 8px;outline:none;text-align:center"
+                    oninput="syncFromInput('pbSpeed')">
+                </div>
               </div>
               <input type="range" id="pbSpeedSlider" min="0.1" max="2" step="0.0001" value="0.43" oninput="applyPbSpeed()" style="width:100%">
               <div style="display:flex;justify-content:space-between;margin-top:4px">
@@ -1082,6 +1100,107 @@ audio { width: 100%; border-radius: 6px; accent-color: var(--violet); }
         </div>
       </div>
 
+      <!-- PAGE: MODEL UPLOAD -->
+      <div class="page" id="page-model">
+        <div class="wave-hero" style="background:linear-gradient(135deg,rgba(245,158,11,0.08) 0%,rgba(139,92,246,0.05) 100%);border-color:rgba(245,158,11,0.2);margin-bottom:20px">
+          <div class="wave-text">
+            <h2>Upload <span style="background:linear-gradient(90deg,var(--yellow),var(--violet2));-webkit-background-clip:text;-webkit-text-fill-color:transparent">Model</span></h2>
+            <p>Upload file .rbxm / .rbxmx langsung ke Toolbox Roblox akunmu</p>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-bottom:14px">
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-icon" style="background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.2)">📦</div>
+                <div><div class="card-title">File Model</div><div class="card-sub">Bisa pilih banyak sekaligus</div></div>
+              </div>
+              <label class="file-drop" style="border-color:rgba(245,158,11,0.25);background:rgba(245,158,11,0.03)">
+                <input type="file" id="modelFiles" accept=".rbxm,.rbxmx" multiple onchange="onModelFiles()">
+                <div class="fd-icon">📦</div>
+                <div class="fd-text">Tap atau drag file model ke sini</div>
+                <div class="fd-count" id="modelCount"></div>
+                <div class="fd-hint">.rbxm · .rbxmx · max 20 file</div>
+              </label>
+              <div class="bulk-list" id="modelList"></div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div class="card-icon" style="background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.2)">📝</div>
+                <div><div class="card-title">Info</div></div>
+              </div>
+              <div class="field">
+                <label class="label">Prefix Nama (opsional)</label>
+                <input type="text" class="input" id="modelPrefix" placeholder="Contoh: MyMap — hasil: 'MyMap filename'">
+              </div>
+              <div class="field" style="margin-bottom:0">
+                <label class="label">Deskripsi (opsional)</label>
+                <input type="text" class="input" id="modelDesc" placeholder="Deskripsi model">
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-icon" style="background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.2)">👤</div>
+                <div><div class="card-title">Upload Ke</div></div>
+              </div>
+              <div class="target-toggle">
+                <div class="target-opt active" id="modelTargetPersonal" onclick="setTarget('model','personal')">
+                  <div class="to-icon">👤</div>
+                  <div class="to-label">Pribadi</div>
+                  <div class="to-sub">Toolbox akun kamu</div>
+                </div>
+                <div class="target-opt" id="modelTargetGroup" onclick="setTarget('model','group')">
+                  <div class="to-icon">👥</div>
+                  <div class="to-label">Komunitas</div>
+                  <div class="to-sub">Toolbox group</div>
+                </div>
+              </div>
+              <div id="modelGroupWrap" style="display:none">
+                <div class="select-wrap">
+                  <select class="input" id="modelGroup"><option value="">Loading...</option></select>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div class="card-icon" style="background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.2)">ℹ️</div>
+                <div><div class="card-title">Info</div></div>
+              </div>
+              <div class="info-box">
+                <div class="ib-icon">📦</div>
+                <div>File <strong>.rbxm</strong> dan <strong>.rbxmx</strong> didukung. Setelah upload, model tersedia di Toolbox → Inventory akunmu di Roblox Studio.</div>
+              </div>
+              <div class="info-box" style="margin-top:10px">
+                <div class="ib-icon">⚠️</div>
+                <div>Pastikan API Key punya permission <strong>Assets: Read &amp; Write</strong> di create.roblox.com/credentials.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn" id="btnModel" onclick="doModelUpload()"
+          style="background:linear-gradient(135deg,var(--yellow),#D97706);color:#111;font-weight:700;width:100%;margin-bottom:10px;box-shadow:0 4px 16px rgba(245,158,11,0.25)">
+          📦 Upload Model ke Toolbox
+        </button>
+        <div class="prog-wrap" id="modelProg"><div class="prog-bar" id="modelProgBar" style="background:linear-gradient(90deg,var(--yellow),var(--violet))"></div></div>
+
+        <div class="bulk-summary" id="modelSummary">
+          <div class="bs-stats">
+            <div class="bs-stat t"><div class="bsn" id="mTotal">0</div><div class="bsl">Total</div></div>
+            <div class="bs-stat ok"><div class="bsn" id="mOk">0</div><div class="bsl">Berhasil</div></div>
+            <div class="bs-stat fail"><div class="bsn" id="mFail">0</div><div class="bsl">Gagal</div></div>
+          </div>
+          <div class="bs-list" id="modelResults"></div>
+          <button class="copy-btn full" style="margin-top:8px" onclick="copyModelIds()">📋 Copy Semua Asset ID</button>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -1093,7 +1212,7 @@ let userId = localStorage.getItem('sf_uid') || '';
 let groups = [];
 let bypassFile = null;
 let previewUrl = null;
-let targets = { bypass: 'personal', bulk: 'personal', direct: 'personal' };
+let targets = { bypass: 'personal', bulk: 'personal', direct: 'personal', model: 'personal' };
 let permMethod = 'public';
 let permTargets = [];
 let bulkBypassResultsData = [];
@@ -1153,6 +1272,7 @@ const pageTitles = {
   'bulk-bypass': ['Bulk Bypass','Upload banyak file sekaligus dengan bypass'],
   'direct': ['Direct Upload','Upload audio tanpa proses apapun'],
   'permission': ['Bulk Permission','Set izin akses audio secara massal'],
+  'model': ['Upload Model','Upload file .rbxm / .rbxmx ke Toolbox Roblox'],
 };
 function showPage(name, el) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -1175,7 +1295,7 @@ async function loadGroups() {
     const data = await res.json();
     groups = data.groups || [];
     const opts = groups.length ? groups.map(g=>`<option value="${g.id}">${g.name} (${g.role||'Member'})</option>`).join('') : '<option value="">Tidak ada komunitas</option>';
-    ['bypassGroup','bulkGroup','directGroup','permGroupSelect'].forEach(id => {
+    ['bypassGroup','bulkGroup','directGroup','permGroupSelect','modelGroup'].forEach(id => {
       const el = document.getElementById(id);
       if(el) el.innerHTML = opts;
     });
@@ -1186,22 +1306,69 @@ async function loadGroups() {
 function setTarget(scope, type) {
   targets[scope] = type;
   const prefix = scope === 'bulk' ? 'bulk' : scope;
-  document.getElementById(prefix+'TargetPersonal').classList.toggle('active', type==='personal');
-  document.getElementById(prefix+'TargetGroup').classList.toggle('active', type==='group');
-  document.getElementById(prefix+'GroupWrap').style.display = type==='group' ? 'block' : 'none';
+  const personalEl = document.getElementById(prefix+'TargetPersonal');
+  const groupEl = document.getElementById(prefix+'TargetGroup');
+  const wrapEl = document.getElementById(prefix+'GroupWrap');
+  if(personalEl) personalEl.classList.toggle('active', type==='personal');
+  if(groupEl) groupEl.classList.toggle('active', type==='group');
+  if(wrapEl) wrapEl.style.display = type==='group' ? 'block' : 'none';
 }
 
 // ===== SLIDERS =====
 function updateSliders() {
   const sp = parseFloat(document.getElementById('speedSlider').value);
   const amp = parseFloat(document.getElementById('ampSlider').value);
+  const pitch = parseFloat(document.getElementById('pitchSlider').value);
+  const ps = Math.round((1/sp)*100000)/100000;
+
   document.getElementById('speedVal').textContent = sp.toFixed(4)+'x';
+  // Sync input boxes
+  if(document.getElementById('speedInput')) document.getElementById('speedInput').value = sp.toFixed(4);
+  if(document.getElementById('ampInput')) document.getElementById('ampInput').value = amp.toFixed(1);
+  if(document.getElementById('pitchInput')) document.getElementById('pitchInput').value = pitch.toFixed(1);
+
   const ae = document.getElementById('ampVal');
   ae.textContent = (amp>=0?'+':'')+amp.toFixed(1)+' dB';
   ae.className = 'slider-val' + (Math.abs(amp)<0.01?' neutral':'');
+
+  // Update pitch display if exists
+  const pv = document.getElementById('pitchVal');
+  if(pv) { pv.textContent = (pitch>=0?'+':'')+pitch.toFixed(1)+' st'; pv.className='slider-val'+(Math.abs(pitch)<0.01?' neutral':''); }
+
+  // Auto-update pbSpeed slider when speed changes
+  const pbSlider = document.getElementById('pbSpeedSlider');
+  if(pbSlider) { pbSlider.value = Math.min(Math.max(ps, 0.1), 2.0); applyPbSpeed(); }
+
   paintSlider('speedSlider', sp, 0.5, 5, 'var(--violet)');
   paintSlider('ampSlider', amp, -20, 20, amp>=0?'var(--cyan)':'var(--pink)');
+  paintSlider('pitchSlider', pitch, -12, 12, 'var(--cyan)');
 }
+
+function syncFromInput(type) {
+  if (type === 'speed') {
+    const val = parseFloat(document.getElementById('speedInput').value);
+    if (isNaN(val)) return;
+    const clamped = Math.max(0.5, Math.min(10, val));
+    document.getElementById('speedSlider').value = Math.min(clamped, 5);
+  } else if (type === 'amp') {
+    const val = parseFloat(document.getElementById('ampInput').value);
+    if (isNaN(val)) return;
+    document.getElementById('ampSlider').value = Math.max(-20, Math.min(20, val));
+  } else if (type === 'pitch') {
+    const val = parseFloat(document.getElementById('pitchInput').value);
+    if (isNaN(val)) return;
+    document.getElementById('pitchSlider').value = Math.max(-12, Math.min(12, val));
+  } else if (type === 'pbSpeed') {
+    const val = parseFloat(document.getElementById('pbSpeedInput').value);
+    if (isNaN(val)) return;
+    document.getElementById('pbSpeedSlider').value = Math.max(0.1, Math.min(2, val));
+    applyPbSpeed();
+    return;
+  }
+  updateSliders();
+}
+
+
 function updateBulkSliders() {
   const sp = parseFloat(document.getElementById('bulkSpeedSlider').value);
   const amp = parseFloat(document.getElementById('bulkAmpSlider').value);
@@ -1261,6 +1428,7 @@ async function doBypassPreview() {
     fd.append('audio',bypassFile);
     fd.append('speed',document.getElementById('speedSlider').value);
     fd.append('amplify',document.getElementById('ampSlider').value);
+    fd.append('pitch',document.getElementById('pitchSlider').value);
     const res=await fetch('/api/preview',{method:'POST',body:fd});
     const data=await res.json();
     if(!res.ok) throw new Error(data.error);
@@ -1316,6 +1484,7 @@ async function doBypassUpload() {
     fd.append('description',document.getElementById('bypassDesc').value.trim());
     fd.append('speed',document.getElementById('speedSlider').value);
     fd.append('amplify',document.getElementById('ampSlider').value);
+    fd.append('pitch',document.getElementById('pitchSlider').value);
     if(groupId) fd.append('groupId',groupId);
 
     const res=await fetch('/api/process-upload',{method:'POST',body:fd});
@@ -1571,11 +1740,11 @@ function copyBulkEntries(dataVar, withBypass) {
 function applyPbSpeed() {
   const ps = parseFloat(document.getElementById('pbSpeedSlider').value);
   const a2 = document.getElementById('bypassAudioPb');
-  if (a2) {
-    a2.playbackRate = Math.min(Math.max(ps, 0.1), 4.0);
-  }
+  if (a2) a2.playbackRate = Math.min(Math.max(ps, 0.1), 4.0);
   const disp = document.getElementById('pbSpeedDisplay');
   if (disp) disp.textContent = ps.toFixed(4);
+  const inp = document.getElementById('pbSpeedInput');
+  if (inp) inp.value = ps.toFixed(4);
   const meta = document.getElementById('bypassPreviewPbMeta');
   if (meta) meta.textContent = `PlaybackSpeed ${ps.toFixed(4)} — bypass speed equiv: ${(1/ps).toFixed(4)}x`;
   const pct = ((ps - 0.1) / (2 - 0.1)) * 100;
@@ -1638,6 +1807,128 @@ function setBtn(id,loading,text){
   b.disabled=loading;
   b.innerHTML=loading?`<span class="spinner"></span> ${text}`:text;
 }
+// ===== MODEL UPLOAD =====
+let modelResultsData = [];
+
+function onModelFiles() {
+  const files = Array.from(document.getElementById('modelFiles').files);
+  document.getElementById('modelCount').textContent = `📁 ${files.length} file dipilih`;
+  document.getElementById('modelList').innerHTML = files.map((f,i) =>
+    `<div class="bulk-item" id="m-item-${i}">
+      <div class="bi-icon" id="m-icon-${i}">📦</div>
+      <div class="bi-name">${f.name}</div>
+      <div class="bi-size">${(f.size/1024).toFixed(1)}KB</div>
+    </div>`
+  ).join('');
+  document.getElementById('modelSummary').classList.remove('show');
+  modelResultsData = [];
+}
+
+async function doModelUpload() {
+  if(!apiKey){alert('Setup API Key dulu!');openModal();return;}
+  const files = document.getElementById('modelFiles').files;
+  if(!files.length){alert('Pilih file .rbxm dulu!');return;}
+  const groupId = targets.model==='group' ? document.getElementById('modelGroup').value : '';
+  if(targets.model==='group'&&!groupId){alert('Pilih komunitas dulu!');return;}
+
+  setBtn('btnModel',true,`Uploading 0/${files.length}...`);
+  showProg('modelProg','modelProgBar');
+  document.getElementById('modelSummary').classList.add('show');
+  document.getElementById('modelResults').innerHTML='';
+  document.getElementById('mTotal').textContent=files.length;
+  modelResultsData=[];
+  let okCount=0,failCount=0;
+
+  const fd=new FormData();
+  Array.from(files).forEach(f=>fd.append('model',f));
+  fd.append('apiKey',apiKey);
+  fd.append('userId',userId);
+  fd.append('namePrefix',document.getElementById('modelPrefix').value.trim());
+  fd.append('description',document.getElementById('modelDesc').value.trim());
+  if(groupId) fd.append('groupId',groupId);
+
+  try {
+    if(files.length === 1) {
+      // Single — JSON response
+      const res = await fetch('/api/upload-model', {method:'POST', body:fd});
+      const data = await res.json();
+      const item = document.getElementById('m-item-0');
+      const icon = document.getElementById('m-icon-0');
+      if(data.success) {
+        if(item) item.className='bulk-item success';
+        if(icon) icon.textContent='✓';
+        okCount++;
+        modelResultsData.push({name:data.name,assetId:data.assetId,status:'success'});
+        document.getElementById('modelResults').insertAdjacentHTML('beforeend',
+          `<div class="bs-item ok"><span>✅</span><span class="bsi-name">${data.name}</span><span class="bsi-id">${data.assetId}</span></div>`);
+      } else {
+        if(item) item.className='bulk-item error';
+        if(icon) icon.textContent='✗';
+        failCount++;
+        modelResultsData.push({name:files[0].name,status:'error',error:data.error});
+        document.getElementById('modelResults').insertAdjacentHTML('beforeend',
+          `<div class="bs-item fail"><span>❌</span><span class="bsi-name">${files[0].name}</span><span class="bsi-err">${data.error}</span></div>`);
+      }
+    } else {
+      // Bulk — SSE
+      const res = await fetch('/api/upload-model', {method:'POST', body:fd});
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf='';
+      while(true) {
+        const {done,value} = await reader.read();
+        if(done) break;
+        buf += dec.decode(value,{stream:true});
+        const lines = buf.split('\n'); buf = lines.pop();
+        for(const line of lines) {
+          if(!line.startsWith('data:')) continue;
+          try {
+            const ev = JSON.parse(line.slice(5));
+            if(ev.type==='progress') {
+              const pct = ((ev.index+1)/ev.total)*100;
+              document.getElementById('modelProgBar').style.width=pct+'%';
+              setBtn('btnModel',true,`Uploading ${ev.index+1}/${ev.total}...`);
+              const item=document.getElementById('m-item-'+ev.index);
+              const icon=document.getElementById('m-icon-'+ev.index);
+              if(ev.status==='uploading') {
+                if(item) item.className='bulk-item processing';
+                if(icon) icon.innerHTML='<span class="spinner" style="width:10px;height:10px;border-width:1.5px"></span>';
+              } else if(ev.status==='success') {
+                if(item) item.className='bulk-item success';
+                if(icon) icon.textContent='✓';
+                okCount++;
+                modelResultsData.push({name:ev.name,assetId:ev.assetId,status:'success'});
+                document.getElementById('modelResults').insertAdjacentHTML('beforeend',
+                  `<div class="bs-item ok"><span>✅</span><span class="bsi-name">${ev.name}</span><span class="bsi-id">${ev.assetId}</span></div>`);
+              } else if(ev.status==='error') {
+                if(item) item.className='bulk-item error';
+                if(icon) icon.textContent='✗';
+                failCount++;
+                modelResultsData.push({name:ev.name,status:'error',error:ev.error});
+                document.getElementById('modelResults').insertAdjacentHTML('beforeend',
+                  `<div class="bs-item fail"><span>❌</span><span class="bsi-name">${ev.name}</span><span class="bsi-err">${ev.error||'error'}</span></div>`);
+              }
+              document.getElementById('mOk').textContent=okCount;
+              document.getElementById('mFail').textContent=failCount;
+            }
+          } catch(e){}
+        }
+      }
+    }
+  } catch(e) { alert('Upload error: '+e.message); }
+
+  document.getElementById('mOk').textContent=okCount;
+  document.getElementById('mFail').textContent=failCount;
+  hideProg('modelProg','modelProgBar');
+  setBtn('btnModel',false,'📦 Upload Model ke Toolbox');
+}
+
+function copyModelIds() {
+  const ids = modelResultsData.filter(r=>r.status==='success').map(r=>`${r.name}: ${r.assetId}`).join('\n');
+  if(!ids){alert('Belum ada yang berhasil!');return;}
+  navigator.clipboard.writeText(ids).then(()=>alert('✓ Semua Asset ID tersalin!'));
+}
+
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 </script>
 </body>
